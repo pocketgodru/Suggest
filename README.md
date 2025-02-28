@@ -51,10 +51,8 @@
 
 ## Как получить файлы
 
-1. Загрузить файлы можно по следующим ссылкам:
-   - [movie.json](https://example.com/teech/movie.json) (заменить на реальную ссылку)
-   - [movies_embeddings.npy](https://example.com/teech/movies_embeddings.npy) (заменить на реальную ссылку)
-   - [model_cache.zip](https://example.com/teech/model_cache.zip) (заменить на реальную ссылку)
+1. Все необходимые файлы можно скачать по ссылке на Яндекс.Диск:
+   - [Все необходимые файлы (movie.json, movies_embeddings.npy, model_cache)](https://disk.yandex.ru/d/XC380KbsTj8kvg)
 
 2. После загрузки разместите файлы в следующих директориях:
    - `movie.json` -> корневая директория и `database-service/app/movie.json`
