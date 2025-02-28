@@ -24,11 +24,6 @@ var/
 venv/
 ENV/
 
-# Большие файлы данных
-movies_embeddings.npy
-movie.json
-model_cache/
-
 # Логи
 *.log
 
