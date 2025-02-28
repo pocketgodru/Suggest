@@ -564,7 +564,7 @@ curl -X POST http://localhost:5001/sync/mongodb-to-redis
 
 7. Откройте веб-интерфейс:
 ```
-http://localhost:5000
+http://localhost:5003
 ```
 
 ---

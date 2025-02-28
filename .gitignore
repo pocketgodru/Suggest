@@ -35,4 +35,11 @@ ENV/
 
 # Файлы ОС
 .DS_Store
-Thumbs.db 
+Thumbs.db
+
+# Большие файлы данных
+movies_embeddings.npy
+movie.json
+model_cache/
+database-service/app/movie.json
+search-service/app/movies_embeddings.npy 
