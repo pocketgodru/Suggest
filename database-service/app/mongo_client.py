@@ -1,8 +1,11 @@
 from pymongo import MongoClient
 import json
 
+from pymongo import MongoClient
+import json
+
 class MongoMovieClient:
-    def __init__(self, host="mongodb://mongodb:27017", db_name="movies_db", collection_name="movies"):
+    def __init__(self, host="mongodb://127.0.0.1:27017", db_name="movies_db", collection_name="movies"):
         """Подключаемся к MongoDB"""
         self.client = MongoClient(host)
         self.db = self.client[db_name]
@@ -10,20 +13,14 @@ class MongoMovieClient:
 
     def clear_and_load_movies(self, json_path):
         """Очищает базу и загружает фильмы из JSON-файла с нормализацией данных"""
-        print(f"📂 Открываем файл {json_path}...")
         with open(json_path, "r", encoding="utf-8") as f:
             movies_data = json.load(f)
-        print(f"✅ Файл успешно загружен, найдено {len(movies_data)} категорий")
 
-        print("🗑️ Очищаем существующие данные в MongoDB...")
         self.collection.delete_many({})  # Полный сброс MongoDB
         movies_list = []
         seen_ids = set()
-        total_movies = sum(len(movies) for movies in movies_data.values())
-        print(f"📊 Всего фильмов в JSON: {total_movies}")
 
         for category, movies in movies_data.items():
-            print(f"📝 Обработка категории '{category}' ({len(movies)} фильмов)...")
             for movie in movies:
                 movie_id = movie.get("id")
 
@@ -39,6 +36,7 @@ class MongoMovieClient:
                 release_years = movie.get("releaseYears", [])
                 release_year = release_years[0]["start"] if release_years and isinstance(release_years[0], dict) else movie.get("year", 2000)
                 poster = movie.get("poster") or {}  # Если poster = None, заменяем на пустой словарь
+
 
                 normalized_movie = {
                     "_id": movie_id,
@@ -56,18 +54,14 @@ class MongoMovieClient:
                     "releaseYear": release_year,
                     "isSeries": movie.get("isSeries", False),
                     "category": category,
-                }
+}
+
 
                 movies_list.append(normalized_movie)
 
         if movies_list:
-            print(f"💾 Сохраняем {len(movies_list)} фильмов в MongoDB...")
             self.collection.insert_many(movies_list)
             print(f"✅ Загружено {len(movies_list)} фильмов в MongoDB")
-            
-            # Проверяем количество фильмов в базе
-            actual_count = self.collection.count_documents({})
-            print(f"📊 Фактическое количество фильмов в MongoDB: {actual_count}")
         else:
             print("⚠️ В MongoDB не загружено ни одного фильма! Проверь JSON-файл.")
 
@@ -98,4 +92,4 @@ class MongoMovieClient:
     def clear_db(self):
         """Полностью очищает базу данных"""
         self.collection.delete_many({})
-        print("🗑️ База данных очищена") 
+        print("🗑️ База данных очищена")

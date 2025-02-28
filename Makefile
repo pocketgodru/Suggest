@@ -24,21 +24,12 @@ else
 	endif
 endif
 
-.PHONY: all build run stop clean help init
+.PHONY: all build run stop clean help init sync-db
 
 # Запуск всего проекта
-all: build run init
+all: build run
 
-# Помощь
-help:
-	@echo -e "$(BLUE)=== Система поиска фильмов ===$(NC)"
-	@echo -e "$(GREEN)Доступные команды:$(NC)"
-	@echo -e "  $(YELLOW)make$(NC)       - Собрать и запустить весь проект"
-	@echo -e "  $(YELLOW)make build$(NC) - Собрать все контейнеры"
-	@echo -e "  $(YELLOW)make init$(NC)  - Инициализировать базы данных"
-	@echo -e "  $(YELLOW)make run$(NC)   - Запустить все сервисы"
-	@echo -e "  $(YELLOW)make stop$(NC)  - Остановить все сервисы"
-	@echo -e "  $(YELLOW)make clean$(NC) - Очистить все контейнеры и тома"
+
 
 # Сборка контейнеров
 build:
@@ -78,33 +69,6 @@ run:
 	@echo -e "$(YELLOW)Веб-интерфейс доступен по адресу: http://localhost:5000$(NC)"
 	@echo -e "$(YELLOW)Redis Commander доступен по адресу: http://localhost:8001$(NC)"
 
-# Инициализация баз данных
-init:
-	@echo -e "$(BLUE)➤ Инициализация баз данных...$(NC)"
-	@if [ -f movie.json ]; then \
-		echo -e "$(GREEN)Загрузка данных в MongoDB...$(NC)"; \
-		for i in $$(seq 1 30); do \
-			if docker compose exec -T database python -c "from mongo_client import MongoMovieClient; client = MongoMovieClient(); client.clear_and_load_movies('movie.json')" 2>/dev/null; then \
-				echo -e "$(GREEN)✓ Данные успешно загружены в MongoDB$(NC)"; \
-				echo -e "$(BLUE)➤ Синхронизация Redis...$(NC)"; \
-				if curl -s -X POST http://localhost:5001/sync/mongodb-to-redis | grep -q "success"; then \
-					echo -e "$(GREEN)✓ Redis успешно синхронизирован$(NC)"; \
-				else \
-					echo -e "$(RED)✗ Ошибка синхронизации Redis$(NC)"; \
-				fi; \
-				break; \
-			fi; \
-			if [ $$i -eq 30 ]; then \
-				echo -e "$(RED)✗ Превышено время ожидания загрузки данных$(NC)"; \
-				exit 1; \
-			fi; \
-			echo -e "$(YELLOW)Попытка $$i из 30. Ожидание готовности MongoDB...$(NC)"; \
-			sleep 5; \
-		done; \
-	else \
-		echo -e "$(RED)⚠ Файл movie.json не найден. Пропускаем инициализацию баз данных.$(NC)"; \
-	fi
-
 # Остановка сервисов
 stop:
 	@echo -e "$(BLUE)➤ Остановка сервисов...$(NC)"
@@ -117,6 +81,13 @@ clean:
 	docker compose down -v
 	docker system prune -f
 	@echo -e "$(GREEN)✓ Система очищена$(NC)"
+
+# Синхронизация MongoDB с Redis
+sync-db:
+	@echo -e "$(BLUE)➤ Синхронизация MongoDB с Redis...$(NC)"
+	@curl -s -X POST http://localhost:5001/sync/mongodb-to-redis | grep -q "success" && \
+	echo -e "$(GREEN)✓ Redis успешно синхронизирован с MongoDB$(NC)" || \
+	echo -e "$(RED)✗ Ошибка синхронизации Redis с MongoDB$(NC)"
 
 # Основная цель
 all: help
@@ -138,6 +109,7 @@ help:
 	@echo -e "  $(YELLOW)make clean$(NC)               - Очистить кэши и временные файлы"
 	@echo -e "  $(YELLOW)make build$(NC)                - Собрать все контейнеры"
 	@echo -e "  $(YELLOW)make stop$(NC)                - Остановить все сервисы"
+	@echo -e "  $(YELLOW)make sync-db$(NC)              - Синхронизировать MongoDB с Redis"
 	@echo -e ""
 	@echo -e "$(BOLD)$(CYAN)Информация о системе:$(NC)"
 	@echo -e "  • Обнаруженная ОС: $(PURPLE)$(OS_NAME)$(NC)"

@@ -1,18 +1,40 @@
 services:
   web:
-    build: ./web-service
+    build:
+      context: .
+      dockerfile: web-service/Dockerfile
     ports:
-      - "5000:5000"
+      - "5003:5000"
     environment:
       - SEARCH_SERVICE_URL=http://search:5002
       - DATABASE_SERVICE_URL=http://database:5001
+      - CUDA_VISIBLE_DEVICES=""
+      - TORCH_DEVICE="cpu"
+      - OMP_NUM_THREADS=1
+      - MKL_NUM_THREADS=1
+      - FLASK_SECRET_KEY=teechtopsecretsessionkey
+      - FLASK_DEBUG=1
+      - PIP_DISABLE_PIP_VERSION_CHECK=1
+      - PIP_NO_CACHE_DIR=1
+      - PYTHONDONTWRITEBYTECODE=1
+    restart: on-failure
     depends_on:
-      - search
-      - database
+      database:
+        condition: service_healthy
+      search:
+        condition: service_started
     volumes:
       - ./web-service/app:/app
+      - ./web-service/app/static:/app/static
+      - ./web-service/app/templates:/app/templates
     networks:
       - movie_network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "--quiet", "http://localhost:5000/health"]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
   search:
     build:
@@ -24,15 +46,39 @@ services:
       - MONGO_URI=mongodb://mongodb:27017
       - MONGO_DB=movies_db
       - MONGO_COLLECTION=movies
+      - CUDA_VISIBLE_DEVICES=""
+      - TORCH_DEVICE="cpu"
+      - OMP_NUM_THREADS=1
+      - MKL_NUM_THREADS=1
+      - TRANSFORMERS_OFFLINE=1
+      - PORT=5002
+      - EMBEDDINGS_FILE=/app/movies_embeddings.npy
+      - FLASK_DEBUG=0
+      - PIP_DISABLE_PIP_VERSION_CHECK=1
+      - PIP_NO_CACHE_DIR=1
+      - PYTHONDONTWRITEBYTECODE=1
+    deploy:
+      resources:
+        limits:
+          memory: 6G
+        reservations:
+          memory: 4G
+    restart: on-failure
     depends_on:
-      - mongodb
+      mongodb:
+        condition: service_started
     volumes:
-      - ./search-service/app/search_service.py:/app/search_service.py
-      - ./search-service/app/turbo_search.py:/app/turbo_search.py
+      - ./search-service/app:/app
       - ./model_cache:/app/model_cache
       - ./movies_embeddings.npy:/app/movies_embeddings.npy
     networks:
       - movie_network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5002/health"]
+      interval: 60s
+      timeout: 30s
+      retries: 3
+      start_period: 180s
 
   database:
     build:
@@ -47,32 +93,69 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_DB=0
+      - PORT=5001
+      - FLASK_DEBUG=1
+      - MOVIE_JSON_PATH=/app/movie.json
+    deploy:
+      resources:
+        limits:
+          memory: 6G
+        reservations:
+          memory: 4G
+    restart: on-failure
     depends_on:
       mongodb:
         condition: service_started
       redis:
         condition: service_healthy
+    volumes:
+      - ./database-service/app:/app
+      - ./movie.json:/app/movie.json
     networks:
       - movie_network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
 
   mongodb:
     image: mongo:latest
     ports:
       - "27017:27017"
+    deploy:
+      resources:
+        limits:
+          memory: 6G
     volumes:
       - mongodb_data:/data/db
+      - ./movie.json:/movie.json
     networks:
       - movie_network
+    command: mongod --wiredTigerCacheSizeGB 0.5
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
 
   redis:
     image: redis/redis-stack:latest
     ports:
-      - "6379:6379"
-      - "8001:8001"
+      - "6380:6379"
+      - "8002:8001"
     volumes:
       - redis_data:/data
     networks:
       - movie_network
+    deploy:
+      resources:
+        limits:
+          memory: 6G
+        reservations:
+          memory: 4G
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s

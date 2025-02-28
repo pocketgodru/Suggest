@@ -1,0 +1,2075 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Поиск фильмов | Подскажем</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    /* Добавляем стили для анимации загрузки */
+    .loading-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      padding: 50px 0;
+      flex-direction: column;
+    }
+    
+    .loading-spinner {
+      width: 150px;
+      height: 150px;
+      background: url('/static/anim_load.gif') no-repeat center center;
+      background-size: contain;
+      margin-bottom: 20px;
+    }
+    
+    .loading-text {
+      font-size: 20px;
+      text-align: center;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <a href="/">
+        <h1>Подскажем</h1>
+      </a>
+    </div>
+    <div class="header-center">
+      <div class="search-bar">
+        <img src="/static/search-icon.svg" alt="Поиск" class="search-icon">
+        <input type="text" id="search-input" placeholder="Введите название фильма...">
+        <button class="close-search" id="clear-search">&times;</button>
+      </div>
+    <div class="search-mode-toggle">
+      <label class="switch">
+          <input type="checkbox" id="search-mode-toggle">
+        <span class="slider round"></span>
+      </label>
+        <span id="search-mode-label">Обычный поиск</span>
+        <button class="info-button" id="info-button">?</button>
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="recommendations-button" id="show-recommendations-button">Показать рекомендации</button>
+    </div>
+  </header>
+  
+  <div id="search-mode-modal" class="modal">
+    <div class="modal-content">
+      <span class="close" id="close-modal">&times;</span>
+      <h2>Режимы поиска</h2>
+      
+      <div class="search-mode-info">
+        <h3>Обычный поиск</h3>
+        <p>Поиск на основе точного совпадения ключевых слов.</p>
+        <ul>
+          <li><strong>Преимущества:</strong> Быстрый поиск, низкая задержка</li>
+          <li><strong>Недостатки:</strong> Менее точные результаты, не понимает контекст</li>
+        </ul>
+      </div>
+      
+      <div class="search-mode-info">
+        <h3>Поиск по описанию</h3>
+        <p>Поиск с использованием векторных представлений для понимания семантики запроса.</p>
+        <ul>
+          <li><strong>Преимущества:</strong> Понимает контекст и смысл, находит похожие фильмы</li>
+          <li><strong>Недостатки:</strong> Может быть медленнее, требует больше ресурсов</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  
+  <div class="container">
+    <div class="filters-panel">
+      <h3>Фильтры</h3>
+      <div class="filter-list">
+        <div class="filter-dropdown">
+          <div class="filter-header" data-filter="genres">
+            <span>Жанры</span>
+            <span class="arrow">▼</span>
+          </div>
+          <div class="filter-content" id="genres-filter">
+            <div class="filter-item">
+              <input type="checkbox" id="genre-drama" value="Драма">
+              <label for="genre-drama">Драма</label>
+            </div>
+            <div class="filter-item">
+              <input type="checkbox" id="genre-comedy" value="Комедия">
+              <label for="genre-comedy">Комедия</label>
+            </div>
+            <div class="filter-item">
+              <input type="checkbox" id="genre-action" value="Боевик">
+              <label for="genre-action">Боевик</label>
+            </div>
+            <div class="filter-item">
+              <input type="checkbox" id="genre-thriller" value="Триллер">
+              <label for="genre-thriller">Триллер</label>
+            </div>
+            <div class="filter-item">
+              <input type="checkbox" id="genre-horror" value="Ужасы">
+              <label for="genre-horror">Ужасы</label>
+            </div>
+            <div class="filter-item">
+              <input type="checkbox" id="genre-scifi" value="Фантастика">
+              <label for="genre-scifi">Фантастика</label>
+            </div>
+            <div class="filter-item">
+              <input type="checkbox" id="genre-fantasy" value="Фэнтези">
+              <label for="genre-fantasy">Фэнтези</label>
+            </div>
+          </div>
+        </div>
+        
+        <div class="filter-dropdown">
+          <div class="filter-header" data-filter="years">
+            <span>Год выпуска</span>
+            <span class="arrow">▼</span>
+          </div>
+          <div class="filter-content" id="years-filter">
+            <div class="filter-item">
+              <input type="checkbox" id="year-2020s" value="2020-2025">
+              <label for="year-2020s">2020 - 2025</label>
+            </div>
+            <div class="filter-item">
+              <input type="checkbox" id="year-2010s" value="2010-2019">
+              <label for="year-2010s">2010 - 2019</label>
+            </div>
+            <div class="filter-item">
+              <input type="checkbox" id="year-2000s" value="2000-2009">
+              <label for="year-2000s">2000 - 2009</label>
+            </div>
+            <div class="filter-item">
+              <input type="checkbox" id="year-1990s" value="1990-1999">
+              <label for="year-1990s">1990 - 1999</label>
+            </div>
+            <div class="filter-item">
+              <input type="checkbox" id="year-older" value="1900-1989">
+              <label for="year-older">До 1990</label>
+            </div>
+        </div>
+      </div>
+      
+        <div class="filter-dropdown">
+          <div class="filter-header" data-filter="rating">
+            <span>Рейтинг</span>
+            <span class="arrow">▼</span>
+          </div>
+          <div class="filter-content" id="rating-filter">
+            <div class="filter-item">
+              <input type="checkbox" id="rating-9" value="9-10">
+              <label for="rating-9">9+ ⭐</label>
+            </div>
+            <div class="filter-item">
+              <input type="checkbox" id="rating-8" value="8-8.9">
+              <label for="rating-8">8 - 8.9 ⭐</label>
+            </div>
+            <div class="filter-item">
+              <input type="checkbox" id="rating-7" value="7-7.9">
+              <label for="rating-7">7 - 7.9 ⭐</label>
+            </div>
+            <div class="filter-item">
+              <input type="checkbox" id="rating-6" value="6-6.9">
+              <label for="rating-6">6 - 6.9 ⭐</label>
+            </div>
+            <div class="filter-item">
+              <input type="checkbox" id="rating-below6" value="0-5.9">
+              <label for="rating-below6">Ниже 6 ⭐</label>
+            </div>
+          </div>
+        </div>
+        
+        <div class="filter-actions">
+          <button class="filter-button" id="apply-filters">Применить</button>
+          <button class="filter-button clear" id="clear-filters">Сбросить</button>
+      </div>
+      
+        <div class="active-filters" id="active-filters">
+          <!-- Здесь будут отображаться активные фильтры -->
+        </div>
+      </div>
+    </div>
+    
+    <main>
+      <!-- Секция рекомендаций -->
+      <div class="recommendations-section" id="recommendations-section" style="display: none;">
+        <div class="recommendations-header">
+          <h2>Рекомендации</h2>
+          <div class="recommendations-actions">
+            <button class="remove-all-likes-button" id="remove-all-likes-button">Удалить все лайки</button>
+            <button class="close-recommendations" id="close-recommendations">&times;</button>
+          </div>
+        </div>
+        <div class="recommendations-grid" id="recommendations-grid">
+          <!-- Здесь будут рекомендации -->
+        </div>
+        <div class="no-recommendations" id="no-recommendations" style="display: none;">
+          У нас пока недостаточно данных для персональных рекомендаций. Поставьте лайки нескольким фильмам, чтобы получить рекомендации.
+        </div>
+        <div class="error-recommendations" id="error-recommendations" style="display: none;">
+          Произошла ошибка при загрузке рекомендаций. Пожалуйста, попробуйте позже.
+        </div>
+      </div>
+      
+      <div class="search-results">
+        <div class="movie-grid" id="movie-grid">
+          <!-- Здесь будут отображаться фильмы -->
+        </div>
+        <div class="no-results" id="no-results" style="display: none;">
+          Фильмы не найдены. Попробуйте изменить запрос.
+        </div>
+        <div class="error-message" id="error-message" style="display: none;">
+          Произошла ошибка при поиске фильмов. Пожалуйста, попробуйте позже.
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="movie-details" id="movie-details">
+    <div class="movie-details-header">
+      <h2 id="detail-title">Название фильма</h2>
+      <button class="close-details" id="close-details">&times;</button>
+    </div>
+    <div class="movie-details-content">
+      <div class="movie-details-left">
+        <div class="movie-poster" id="detail-poster">
+          <img src="" alt="Постер фильма">
+          <div class="detail-like-button" id="detail-like-button" data-movie-id="">
+            <svg viewBox="0 0 24 24">
+              <path d="M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.42,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.58,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z"></path>
+            </svg>
+          </div>
+        </div>
+        <div class="movie-rating-container">
+          <h3>Ваша оценка</h3>
+          <div class="movie-rating" id="movie-rating">
+            <div class="star" data-value="1">★</div>
+            <div class="star" data-value="2">★</div>
+            <div class="star" data-value="3">★</div>
+            <div class="star" data-value="4">★</div>
+            <div class="star" data-value="5">★</div>
+          </div>
+          <div class="rating-value" id="rating-value">Не оценено</div>
+        </div>
+      </div>
+      <div class="movie-info">
+        <div class="movie-year-genre" id="detail-year-genre">2023 • Драма, Комедия</div>
+        <div class="movie-description" id="detail-description">
+          Описание фильма будет здесь...
+        </div>
+        <div class="movie-cast">
+          <h3>В ролях</h3>
+          <ul id="detail-cast">
+            <li>Актер 1</li>
+            <li>Актер 2</li>
+            <li>Актер 3</li>
+          </ul>
+        </div>
+        <div class="movie-comment-section">
+          <h3>Ваш комментарий</h3>
+          <textarea id="movie-comment" placeholder="Напишите ваше мнение о фильме..."></textarea>
+          <button id="save-comment-btn" class="save-comment-btn">Сохранить комментарий</button>
+          <div id="user-comments" class="user-comments">
+            <!-- Комментарии пользователей будут здесь -->
+          </div>
+        </div>
+      </div>
+      <div class="movie-recommendations">
+        <h3>Похожие фильмы</h3>
+        <div class="recommendations-list" id="detail-recommendations">
+          <!-- Здесь будут рекомендации -->
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Основные элементы интерфейса
+    const searchInput = document.getElementById('search-input');
+      const clearSearch = document.getElementById('clear-search');
+    const movieGrid = document.getElementById('movie-grid');
+      const noResults = document.getElementById('no-results');
+      const errorMessage = document.getElementById('error-message');
+      const searchModeToggle = document.getElementById('search-mode-toggle');
+    const searchModeLabel = document.getElementById('search-mode-label');
+    const infoButton = document.getElementById('info-button');
+      const modal = document.getElementById('search-mode-modal');
+      const closeModal = document.getElementById('close-modal');
+      const movieDetails = document.getElementById('movie-details');
+      const closeDetails = document.getElementById('close-details');
+      const showRecommendationsButton = document.getElementById('show-recommendations-button');
+      const recommendationsSection = document.getElementById('recommendations-section');
+      const closeRecommendations = document.getElementById('close-recommendations');
+      const removeAllLikesButton = document.getElementById('remove-all-likes-button');
+      
+      // Фильтры
+      const filterHeaders = document.querySelectorAll('.filter-header');
+      const applyFiltersBtn = document.getElementById('apply-filters');
+      const clearFiltersBtn = document.getElementById('clear-filters');
+      const activeFiltersContainer = document.getElementById('active-filters');
+      
+      // Переменные для хранения данных
+      let currentMovies = []; // Текущие результаты поиска
+      let lastSearchQuery = ''; // Последний поисковый запрос
+      let lastSearchMode = 'redis'; // Последний режим поиска
+      let recommendationsLoaded = false; // Флаг загрузки рекомендаций
+      let userId = null; // ID пользователя
+      
+      // Получаем ID пользователя с сервера
+      function getUserId() {
+        return fetch('/api/user_id')
+          .then(response => {
+            if (!response.ok) {
+              throw new Error('Не удалось получить ID пользователя');
+            }
+            return response.json();
+          })
+          .then(data => {
+            userId = data.user_id;
+            console.log('Получен ID пользователя с сервера:', userId);
+            return userId;
+          })
+          .catch(error => {
+            console.error('Ошибка при получении ID пользователя:', error);
+            // Если не удалось получить ID с сервера, используем локальный ID
+      if (!localStorage.getItem('userId')) {
+              const localUserId = 'user_' + Math.random().toString(36).substring(2, 15);
+              localStorage.setItem('userId', localUserId);
+            }
+            userId = localStorage.getItem('userId');
+            return userId;
+          });
+      }
+      
+      // Инициализация: получаем ID пользователя
+      getUserId().then(() => {
+        // Здесь можно выполнить действия, которые требуют ID пользователя
+        // Например, загрузить рекомендации при загрузке страницы
+      });
+      
+      // Обработчик для кнопки "Показать рекомендации"
+      showRecommendationsButton.addEventListener('click', function() {
+        if (!recommendationsLoaded) {
+          loadRecommendations();
+        }
+        recommendationsSection.style.display = 'block';
+        
+        // Прокрутка к разделу рекомендаций на мобильных устройствах
+        if (window.innerWidth <= 768) {
+          recommendationsSection.scrollIntoView({ behavior: 'smooth' });
+        }
+      });
+      
+      // Обработчик для кнопки закрытия рекомендаций
+      closeRecommendations.addEventListener('click', function() {
+        recommendationsSection.style.display = 'none';
+      });
+      
+      // Обработчики для выпадающих фильтров
+      filterHeaders.forEach(header => {
+        header.addEventListener('click', function() {
+          const filterName = this.getAttribute('data-filter');
+          const content = document.getElementById(`${filterName}-filter`);
+          
+          // Закрываем все другие фильтры
+          document.querySelectorAll('.filter-content').forEach(item => {
+            if (item.id !== `${filterName}-filter`) {
+              item.classList.remove('active');
+            }
+          });
+          
+          document.querySelectorAll('.filter-header').forEach(item => {
+            if (item !== this) {
+              item.classList.remove('active');
+            }
+          });
+          
+          // Открываем/закрываем текущий фильтр
+          this.classList.toggle('active');
+          content.classList.toggle('active');
+        });
+      });
+      
+      // Применение фильтров
+      applyFiltersBtn.addEventListener('click', function() {
+        // Очищаем контейнер активных фильтров
+        activeFiltersContainer.innerHTML = '';
+        
+        // Собираем выбранные фильтры
+        const selectedFilters = {
+          genres: [],
+          years: [],
+          rating: []
+        };
+        
+        // Жанры
+        document.querySelectorAll('#genres-filter input:checked').forEach(checkbox => {
+          selectedFilters.genres.push(checkbox.value);
+          addActiveFilterItem('genre', checkbox.value);
+        });
+        
+        // Годы
+        document.querySelectorAll('#years-filter input:checked').forEach(checkbox => {
+          selectedFilters.years.push(checkbox.value);
+          addActiveFilterItem('year', checkbox.value);
+        });
+        
+        // Рейтинг
+        document.querySelectorAll('#rating-filter input:checked').forEach(checkbox => {
+          selectedFilters.rating.push(checkbox.value);
+          addActiveFilterItem('rating', checkbox.value);
+        });
+        
+        // Закрываем все фильтры
+        document.querySelectorAll('.filter-content').forEach(content => {
+          content.classList.remove('active');
+        });
+        
+        document.querySelectorAll('.filter-header').forEach(header => {
+          header.classList.remove('active');
+        });
+        
+        // Применяем фильтры, если есть результаты поиска
+        if (currentMovies.length > 0) {
+          applyFiltersToMovies(selectedFilters);
+        } else if (lastSearchQuery) {
+          // Если нет текущих фильмов, но есть последний запрос, выполняем поиск заново
+          searchMovies(lastSearchQuery);
+        }
+      });
+      
+      // Сброс фильтров
+      clearFiltersBtn.addEventListener('click', function() {
+        // Снимаем все чекбоксы
+        document.querySelectorAll('.filter-content input[type="checkbox"]').forEach(checkbox => {
+          checkbox.checked = false;
+        });
+        
+        // Очищаем контейнер активных фильтров
+        activeFiltersContainer.innerHTML = '';
+        
+        // Восстанавливаем исходные результаты из localStorage
+        restoreOriginalResults();
+      });
+      
+      // Функция для добавления активного фильтра
+      function addActiveFilterItem(type, value) {
+        const filterItem = document.createElement('div');
+        filterItem.className = 'active-filter-item';
+        
+        let displayText = value;
+        if (type === 'rating') {
+          displayText = `Рейтинг: ${value}`;
+        } else if (type === 'year') {
+          displayText = `Год: ${value}`;
+        }
+        
+        filterItem.innerHTML = `
+          <span>${displayText}</span>
+          <span class="filter-remove" data-type="${type}" data-value="${value}">×</span>
+        `;
+        
+        // Обработчик для удаления фильтра
+        filterItem.querySelector('.filter-remove').addEventListener('click', function() {
+          const filterType = this.getAttribute('data-type');
+          const filterValue = this.getAttribute('data-value');
+          
+          // Снимаем соответствующий чекбокс
+          document.querySelectorAll(`.filter-content input[value="${filterValue}"]`).forEach(checkbox => {
+            checkbox.checked = false;
+          });
+          
+          // Удаляем элемент из DOM
+          this.parentElement.remove();
+          
+          // Применяем фильтры заново
+          applyFiltersBtn.click();
+        });
+        
+        activeFiltersContainer.appendChild(filterItem);
+      }
+      
+      // Функция для применения фильтров к текущим фильмам
+      function applyFiltersToMovies(filters) {
+        // Показываем индикатор загрузки
+        movieGrid.innerHTML = '<div class="loading">Применение фильтров...</div>';
+        
+        // Получаем текущие фильмы из localStorage
+        const originalMovies = getOriginalMovies();
+        
+        if (!originalMovies || originalMovies.length === 0) {
+          noResults.style.display = 'block';
+          movieGrid.innerHTML = '';
+          return;
+        }
+
+        // Проверяем, есть ли активные фильтры
+        const hasActiveFilters = 
+          filters.genres.length > 0 || 
+          filters.years.length > 0 || 
+          filters.rating.length > 0;
+        
+        // Если нет активных фильтров, показываем оригинальные результаты
+        if (!hasActiveFilters) {
+          displayMovies(originalMovies);
+          return;
+        }
+        
+        // Отправляем запрос на сервер для фильтрации
+        fetch('/filter', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            movies: originalMovies,
+            filters: filters
+          })
+        })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Ошибка при фильтрации');
+          }
+          return response.json();
+        })
+        .then(filteredMovies => {
+          // Отображаем отфильтрованные фильмы
+          displayMovies(filteredMovies);
+          
+          // Сохраняем отфильтрованные фильмы как текущие
+          currentMovies = filteredMovies;
+        })
+        .catch(error => {
+          console.error('Ошибка:', error);
+          errorMessage.style.display = 'block';
+          movieGrid.innerHTML = '';
+        });
+      }
+      
+      // Функция для восстановления исходных результатов
+      function restoreOriginalResults() {
+        const originalMovies = getOriginalMovies();
+        
+        if (originalMovies && originalMovies.length > 0) {
+          displayMovies(originalMovies);
+          currentMovies = originalMovies;
+        } else if (lastSearchQuery) {
+          // Если нет сохраненных результатов, выполняем поиск заново
+          searchMovies(lastSearchQuery);
+        }
+      }
+      
+      // Функция для получения оригинальных фильмов из localStorage
+      function getOriginalMovies() {
+        const moviesJson = localStorage.getItem('originalMovies');
+        return moviesJson ? JSON.parse(moviesJson) : null;
+      }
+      
+      // Функция для сохранения оригинальных фильмов в localStorage
+      function saveOriginalMovies(movies) {
+        localStorage.setItem('originalMovies', JSON.stringify(movies));
+      }
+      
+      // Проверяем наличие параметра запроса в URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const queryParam = urlParams.get('query');
+      if (queryParam) {
+        searchInput.value = queryParam;
+        searchMovies(queryParam);
+      }
+      
+      // Обработчик поиска
+      let searchTimeout;
+      
+      searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+          const query = searchInput.value.trim();
+          if (query.length > 2) {
+            searchMovies(query);
+          } else if (query.length === 0) {
+            // Вместо очистки результатов, загружаем все фильмы
+            searchMovies(""); // Отправляем пустой запрос для получения всех фильмов
+          }
+        }, 500);
+      });
+      
+      clearSearch.addEventListener('click', function() {
+        searchInput.value = '';
+        // Вместо очистки результатов, загружаем все фильмы
+        searchMovies(""); // Отправляем пустой запрос для получения всех фильмов
+      });
+      
+      // Обработчик изменения режима поиска
+      searchModeToggle.addEventListener('change', function() {
+        if (this.checked) {
+          lastSearchMode = 'faiss';
+          document.getElementById('search-mode-label').textContent = 'Поиск по описанию';
+          console.log('Режим поиска изменен на: faiss');
+        } else {
+          lastSearchMode = 'redis';
+          document.getElementById('search-mode-label').textContent = 'Обычный поиск';
+          console.log('Режим поиска изменен на: redis');
+        }
+        
+        // Если есть последний поисковый запрос, выполняем поиск с новым режимом
+        if (lastSearchQuery) {
+          searchMovies(lastSearchQuery);
+        }
+      });
+      
+      // Модальное окно с информацией
+      infoButton.addEventListener('click', function() {
+        modal.style.display = 'block';
+      });
+      
+      closeModal.addEventListener('click', function() {
+        modal.style.display = 'none';
+      });
+      
+      window.addEventListener('click', function(event) {
+        if (event.target === modal) {
+          modal.style.display = 'none';
+        }
+        if (event.target === movieDetails) {
+          movieDetails.style.display = 'none';
+        }
+      });
+      
+      // Закрытие деталей фильма
+      closeDetails.addEventListener('click', function() {
+        movieDetails.style.display = 'none';
+      });
+      
+      // Функция для отображения анимации загрузки
+      function showLoading(container) {
+        // Для рекомендаций оставляем CSS-анимацию
+        if (container.id === 'recommendations-grid') {
+          container.innerHTML = `
+            <div class="loading-container">
+              <div class="loading-animation">
+                <div class="spinner"></div>
+              </div>
+              <div class="loading-text">Загрузка...</div>
+            </div>
+          `;
+        } else {
+          // Для остальных контейнеров используем GIF-анимацию
+          container.innerHTML = `
+            <div class="loading-container big-loading">
+              <div class="loading-gif-container">
+                <img src="/static/anim_load.gif" alt="Загрузка..." class="loading-gif">
+              </div>
+              <div class="loading-text">Загрузка...</div>
+            </div>
+          `;
+        }
+      }
+
+      // Функция для загрузки рекомендаций
+      function loadRecommendations() {
+        const recommendationsGrid = document.getElementById('recommendations-grid');
+        
+        // Показываем анимацию загрузки
+        showLoading(recommendationsGrid);
+        
+        // Получаем userId, дожидаемся разрешения Promise
+        getUserId()
+          .then(userId => {
+            console.log('Загрузка рекомендаций для пользователя:', userId);
+            
+            return fetch(`/get_recommendations/${userId}`);
+          })
+          .then(response => {
+            if (!response.ok) {
+              throw new Error('Failed to load recommendations');
+            }
+            return response.json();
+          })
+          .then(data => {
+            displayRecommendations(data.movies, recommendationsGrid);
+          })
+          .catch(error => {
+            console.error('Ошибка при загрузке рекомендаций:', error);
+            recommendationsGrid.innerHTML = `
+              <div class="error-message">
+                <p>Не удалось загрузить рекомендации. Пожалуйста, попробуйте позже.</p>
+                <button onclick="loadRecommendations()" class="retry-button">Повторить</button>
+              </div>
+            `;
+          });
+      }
+
+      // Также добавим анимацию загрузки для поиска фильмов
+      function searchMovies(query) {
+        const movieGrid = document.getElementById('movie-grid');
+        
+        // Используем lastSearchMode вместо поиска элемента по ID
+        const searchMode = lastSearchMode || 'redis';
+        
+        // Сохраняем текущий запрос и режим
+        lastSearchQuery = query;
+        
+        // Очищаем активные фильтры при новом поиске
+        const activeFiltersContainer = document.getElementById('active-filters');
+        if (activeFiltersContainer) {
+        activeFiltersContainer.innerHTML = '';
+        }
+        
+        // Сбрасываем чекбоксы фильтров
+        document.querySelectorAll('.filter-content input[type="checkbox"]').forEach(checkbox => {
+          checkbox.checked = false;
+        });
+        
+        // Скрываем сообщения об ошибках и отсутствии результатов
+        const noResults = document.getElementById('no-results');
+        const errorMessage = document.getElementById('error-message');
+        if (noResults) noResults.style.display = 'none';
+        if (errorMessage) errorMessage.style.display = 'none';
+        
+        // Показываем анимацию загрузки
+        showLoading(movieGrid);
+        
+        // Логируем информацию о поиске
+        console.log(`Поиск: "${query}" в режиме: ${searchMode}`);
+        
+        fetch(`/search_movies?query=${encodeURIComponent(query)}&search_mode=${searchMode}&limit=50`)
+          .then(response => {
+            if (!response.ok) {
+              throw new Error('Ошибка сети');
+            }
+            return response.json();
+          })
+          .then(data => {
+            console.log('Получены данные от сервера:', data);
+            
+            // Проверяем, что data - это массив
+            if (!Array.isArray(data)) {
+              console.error('Ошибка: данные от сервера не являются массивом', data);
+              data = [];
+            }
+            
+            // Сохраняем оригинальные результаты в localStorage
+            saveOriginalMovies(data);
+            
+            // Отображаем результаты
+            displayMovies(data);
+            
+            // Обновляем текущие фильмы
+            currentMovies = data;
+          })
+          .catch(error => {
+            console.error('Ошибка при поиске:', error);
+            movieGrid.innerHTML = `
+              <div class="error-message">
+                <p>Произошла ошибка при поиске фильмов. Пожалуйста, попробуйте позже.</p>
+              </div>
+            `;
+          });
+      }
+      
+      // Отображение результатов поиска
+    function displayMovies(movies) {
+        movieGrid.innerHTML = '';
+        
+        if (!movies || movies.length === 0) {
+          noResults.style.display = 'block';
+          return;
+        }
+
+        movies.forEach(movie => {
+          if (!movie || typeof movie !== 'object') {
+            console.error('Некорректные данные фильма:', movie);
+            return;
+          }
+          
+          const movieCard = document.createElement('div');
+          movieCard.className = 'movie-card';
+          
+          // Получаем название фильма (поддержка разных форматов данных)
+          const title = movie.name || movie.title || movie.alternativeName || 'Название отсутствует';
+          
+          // Получаем ID фильма (поддержка разных форматов данных)
+          let movieId = movie.id || movie._id || '';
+          
+          // Если ID все еще пустой, пробуем другие возможные поля или генерируем временный ID
+          if (!movieId) {
+            // Пробуем другие возможные поля
+            movieId = movie.movie_id || movie.movieId || movie.tmdb_id || '';
+            
+            // Если ID все еще пустой, используем хеш от названия фильма как временный ID
+            if (!movieId && title !== 'Название отсутствует') {
+              movieId = 'temp_' + title.replace(/\s+/g, '_').toLowerCase();
+              console.log('Сгенерирован временный ID для фильма:', title, movieId);
+            }
+          }
+          
+          // Получаем жанры (поддержка разных форматов данных)
+          let genres = '';
+          if (movie.genres) {
+            if (Array.isArray(movie.genres)) {
+              genres = movie.genres.slice(0, 2).join(', ');
+            } else if (typeof movie.genres === 'string') {
+              genres = movie.genres.split('|').slice(0, 2).join(', ');
+            }
+          }
+          
+          // Получаем рейтинг (поддержка разных форматов данных)
+          let rating = '';
+          if (movie.rating !== undefined) {
+            // Проверим тип рейтинга и его значение
+            console.log(`Рейтинг фильма "${title}":`, movie.rating, typeof movie.rating);
+            
+            let ratingValue = movie.rating;
+            let ratingSource = '';
+            
+            // Устанавливаем источник, если он есть
+            if (movie.rating_source) {
+              console.log(`Источник рейтинга для ${title}:`, movie.rating_source);
+              ratingSource = movie.rating_source;
+            }
+            
+            // Если у нас есть original_rating, можем определить источник
+            if (!ratingSource && movie.original_rating && typeof movie.original_rating === 'object') {
+              // Проверяем наличие рейтингов из разных источников
+              if (movie.original_rating.kp && parseFloat(movie.original_rating.kp) > 0) {
+                ratingSource = 'КП';
+              } else if (movie.original_rating.imdb && parseFloat(movie.original_rating.imdb) > 0) {
+                ratingSource = 'IMDb';
+              } else if (movie.original_rating.tmdb && parseFloat(movie.original_rating.tmdb) > 0) {
+                ratingSource = 'TMDB';
+              }
+              
+              // Если есть несколько источников с рейтингами > 0, это средний рейтинг
+              let validRatings = 0;
+              if (movie.original_rating.kp && parseFloat(movie.original_rating.kp) > 0) validRatings++;
+              if (movie.original_rating.imdb && parseFloat(movie.original_rating.imdb) > 0) validRatings++;
+              if (movie.original_rating.tmdb && parseFloat(movie.original_rating.tmdb) > 0) validRatings++;
+              
+              if (validRatings > 1) {
+                ratingSource = 'Σ';
+              }
+            }
+            
+            // Форматируем рейтинг
+            if (typeof ratingValue === 'string') {
+              ratingValue = parseFloat(ratingValue);
+            }
+            
+            if (!isNaN(ratingValue) && ratingValue > 0) {
+              let ratingText = ratingValue.toFixed(1);
+            rating = `<div class="movie-rating">
+              <img src="/static/star.svg" alt="Рейтинг">
+                <span>${ratingText}</span>
+                ${ratingSource ? `<small class="rating-source">${ratingSource}</small>` : ''}
+            </div>`;
+            }
+          }
+          
+          // Получаем постер (поддержка разных форматов данных)
+          let posterUrl = '/static/default-poster.jpg';
+          if (movie.poster_path) {
+            posterUrl = `https://image.tmdb.org/t/p/w500${movie.poster_path}`;
+            console.log(`Постер из poster_path: ${posterUrl}`);
+          } else if (movie.poster) {
+            if (typeof movie.poster === 'string') {
+              posterUrl = movie.poster;
+              console.log(`Постер из строки: ${posterUrl}`);
+            } else if (typeof movie.poster === 'object') {
+              if (movie.poster.url) {
+                posterUrl = movie.poster.url;
+                console.log(`Постер из poster.url: ${posterUrl}`);
+              } else if (movie.poster.previewUrl) {
+                posterUrl = movie.poster.previewUrl;
+                console.log(`Постер из poster.previewUrl: ${posterUrl}`);
+              }
+            }
+          }
+            
+            movieCard.innerHTML = `
+            <div class="movie-poster">
+              <img src="${posterUrl}" alt="${title}" onerror="this.src='/static/default-poster.jpg'">
+              <div class="like-button" data-movie-id="${movieId}">
+                <svg viewBox="0 0 24 24">
+                  <path d="M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.42,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.58,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z"></path>
+                </svg>
+              </div>
+            </div>
+            <div class="movie-title">${title}</div>
+            <div class="movie-genres">${genres}</div>
+            ${rating}
+          `;
+          
+          movieCard.addEventListener('click', (e) => {
+            // Если клик был по кнопке лайка, обрабатываем его отдельно
+            if (e.target.closest('.like-button')) {
+              e.stopPropagation();
+              handleLikeClick(e.target.closest('.like-button'), movieId);
+            } else {
+              // Иначе показываем детали фильма
+              showMovieDetails(movieId);
+            }
+          });
+          
+          movieGrid.appendChild(movieCard);
+          
+          // Проверяем, лайкнут ли фильм
+          checkIfMovieLiked(movieId);
+        });
+      }
+      
+      // Очистка результатов - обновляем, чтобы при необходимости вызывать запрос для получения всех фильмов
+      function clearResults() {
+        movieGrid.innerHTML = '';
+        noResults.style.display = 'none';
+        errorMessage.style.display = 'none';
+        currentMovies = [];
+        lastSearchQuery = '';
+        
+        // Загружаем все фильмы вместо пустого состояния
+        searchMovies("");
+      }
+      
+      // Показ деталей фильма
+      function showMovieDetails(movieId) {
+        if (!movieId) {
+          console.error('Невозможно показать детали фильма: не указан ID');
+          return;
+        }
+        
+        // Вместо прямого получения ID из localStorage, используем функцию getUserId
+        getUserId().then(userId => {
+        // Получаем информацию о фильме с сервера
+        fetch(`/get_movie/${movieId}`)
+          .then(response => {
+            if (!response.ok) {
+              throw new Error('Failed to load movie details');
+            }
+            return response.json();
+          })
+          .then(movie => {
+              console.log('Данные о фильме:', movie); // Логируем весь объект фильма
+              
+              if (!movie || typeof movie !== 'object') {
+                console.error('Получены некорректные данные фильма:', movie);
+                throw new Error('Некорректные данные фильма');
+              }
+              
+            // Название фильма
+            const title = movie.name || movie.title || movie.alternativeName || 'Название отсутствует';
+            document.getElementById('detail-title').textContent = title;
+            
+            // Устанавливаем ID для кнопки лайка
+            const detailLikeButton = document.getElementById('detail-like-button');
+            detailLikeButton.setAttribute('data-movie-id', movieId);
+            
+            // Проверяем, лайкнут ли фильм
+            fetch(`/is_movie_liked/${userId}/${movieId}`)
+              .then(response => response.json())
+              .then(data => {
+                if (data.is_liked || data.liked) {
+                  detailLikeButton.classList.add('active');
+                } else {
+                  detailLikeButton.classList.remove('active');
+                }
+              })
+              .catch(error => console.error('Ошибка при проверке лайка:', error));
+            
+            // Обработчик клика по кнопке лайка
+            detailLikeButton.onclick = function(e) {
+              e.stopPropagation();
+              handleLikeClick(detailLikeButton, movieId);
+            };
+            
+            // Постер фильма
+            let posterUrl = '/static/default-poster.jpg';
+            if (movie.poster_path) {
+              posterUrl = `https://image.tmdb.org/t/p/w500${movie.poster_path}`;
+            } else if (movie.poster) {
+              if (typeof movie.poster === 'string') {
+                posterUrl = movie.poster;
+              } else if (typeof movie.poster === 'object') {
+                if (movie.poster.url) {
+                  posterUrl = movie.poster.url;
+                } else if (movie.poster.previewUrl) {
+                  posterUrl = movie.poster.previewUrl;
+                }
+              }
+            }
+            
+            document.querySelector('#detail-poster img').src = posterUrl;
+            document.querySelector('#detail-poster img').onerror = function() {
+              this.src = '/static/default-poster.jpg';
+            };
+            
+            // Год и жанры
+            let yearGenre = '';
+            
+            // Год
+            if (movie.release_date) {
+              yearGenre += movie.release_date.substring(0, 4);
+            } else if (movie.year) {
+              yearGenre += movie.year;
+            }
+            
+            // Жанры
+            if (movie.genres) {
+              let genresList = [];
+              if (Array.isArray(movie.genres)) {
+                genresList = movie.genres.map(g => typeof g === 'object' && g.name ? g.name : g);
+              } else if (typeof movie.genres === 'string') {
+                genresList = movie.genres.split('|');
+              }
+              
+              if (genresList.length > 0) {
+                if (yearGenre) {
+                  yearGenre += ' • ';
+                }
+                yearGenre += genresList.join(', ');
+              }
+            }
+            
+            document.getElementById('detail-year-genre').textContent = yearGenre || 'Информация отсутствует';
+            
+            // Описание
+            const description = movie.description || movie.overview || movie.shortDescription || 'Описание отсутствует';
+            document.getElementById('detail-description').textContent = description;
+            
+              // Очищаем существующий блок с рейтингом, если он есть
+              const existingRatingInfo = document.querySelector('.movie-detail-rating');
+              if (existingRatingInfo) {
+                existingRatingInfo.remove();
+              }
+              
+              // Добавляем отображение рейтинга фильма
+              const ratingInfo = document.createElement('div');
+              ratingInfo.className = 'movie-detail-rating';
+              
+              // Выводим в консоль весь объект фильма для отладки
+              console.log('Полные данные о фильме:', movie);
+              
+              // Получаем рейтинг (поддержка разных форматов данных)
+              let ratingValue = null;
+              let ratingSource = 'Рейтинг';
+              let ratingSourceDetails = [];
+              
+              // Сначала проверяем, есть ли поле с уже вычисленным рейтингом
+              if (typeof movie.rating !== 'undefined' && movie.rating !== null) {
+                console.log('Рейтинг из поля rating:', movie.rating, typeof movie.rating);
+                
+                if (typeof movie.rating === 'number' || typeof movie.rating === 'string') {
+                  try {
+                    ratingValue = parseFloat(movie.rating);
+                    if (!isNaN(ratingValue) && ratingValue > 0) {
+                      console.log('Преобразован числовой рейтинг:', ratingValue);
+                      ratingSource = 'Рейтинг';
+                      ratingSourceDetails.push('числовой рейтинг');
+                    }
+                  } catch (e) {
+                    console.error('Ошибка при преобразовании рейтинга:', e);
+                  }
+                } else if (typeof movie.rating === 'object' && movie.rating !== null) {
+                  // Возможно, это объект с несколькими рейтингами
+                  console.log('Рейтинг является объектом:', movie.rating);
+                  
+                  // Расчет среднего рейтинга из объекта rating
+                  const ratingValues = [];
+                  
+                  // Проверяем рейтинг КиноПоиска
+                  if (movie.rating.kp) {
+                    try {
+                      const kpRating = parseFloat(movie.rating.kp);
+                      if (!isNaN(kpRating) && kpRating > 0) {
+                        ratingValues.push(kpRating);
+                        ratingSourceDetails.push(`КиноПоиск: ${kpRating.toFixed(1)}`);
+                        if (ratingSource === 'Рейтинг') {
+                          ratingSource = 'КиноПоиск';
+                        }
+                      }
+                    } catch (e) {
+                      console.error('Ошибка при обработке рейтинга КиноПоиска:', e);
+                    }
+                  }
+                  
+                  // Проверяем рейтинг IMDb
+                  if (movie.rating.imdb) {
+                    try {
+                      const imdbRating = parseFloat(movie.rating.imdb);
+                      if (!isNaN(imdbRating) && imdbRating > 0) {
+                        ratingValues.push(imdbRating);
+                        ratingSourceDetails.push(`IMDb: ${imdbRating.toFixed(1)}`);
+                        if (ratingSource === 'Рейтинг') {
+                          ratingSource = 'IMDb';
+                        }
+                      }
+                    } catch (e) {
+                      console.error('Ошибка при обработке рейтинга IMDb:', e);
+                    }
+                  }
+                  
+                  // Проверяем рейтинг TMDB
+                  if (movie.rating.tmdb) {
+                    try {
+                      const tmdbRating = parseFloat(movie.rating.tmdb);
+                      if (!isNaN(tmdbRating) && tmdbRating > 0) {
+                        ratingValues.push(tmdbRating);
+                        ratingSourceDetails.push(`TMDB: ${tmdbRating.toFixed(1)}`);
+                        if (ratingSource === 'Рейтинг') {
+                          ratingSource = 'TMDB';
+                        }
+                      }
+                    } catch (e) {
+                      console.error('Ошибка при обработке рейтинга TMDB:', e);
+                    }
+                  }
+                  
+                  // Если у нас есть несколько рейтингов, вычисляем средний
+                  if (ratingValues.length > 1) {
+                    ratingValue = ratingValues.reduce((sum, val) => sum + val, 0) / ratingValues.length;
+                    ratingSource = 'Средний';
+                    console.log('Вычислен средний рейтинг:', ratingValue, 'из значений:', ratingValues);
+                  } else if (ratingValues.length === 1) {
+                    ratingValue = ratingValues[0];
+                    console.log('Использован единственный доступный рейтинг:', ratingValue);
+                  }
+                }
+              }
+              
+              // Проверяем original_rating, если есть (добавлено в сервере)
+              if (movie.original_rating && ratingValue === null) {
+                console.log('Проверяем original_rating:', movie.original_rating);
+                
+                if (typeof movie.original_rating === 'object') {
+                  // Расчет среднего рейтинга из объекта original_rating
+                  const ratingValues = [];
+                  
+                  // Проверяем рейтинг КиноПоиска
+                  if (movie.original_rating.kp) {
+                    try {
+                      const kpRating = parseFloat(movie.original_rating.kp);
+                      if (!isNaN(kpRating) && kpRating > 0) {
+                        ratingValues.push(kpRating);
+                        ratingSourceDetails.push(`КиноПоиск: ${kpRating.toFixed(1)}`);
+                        if (ratingSource === 'Рейтинг') {
+                          ratingSource = 'КиноПоиск';
+                        }
+                      }
+                    } catch (e) {
+                      console.error('Ошибка при обработке original_rating КиноПоиска:', e);
+                    }
+                  }
+                  
+                  // Проверяем рейтинг IMDb
+                  if (movie.original_rating.imdb) {
+                    try {
+                      const imdbRating = parseFloat(movie.original_rating.imdb);
+                      if (!isNaN(imdbRating) && imdbRating > 0) {
+                        ratingValues.push(imdbRating);
+                        ratingSourceDetails.push(`IMDb: ${imdbRating.toFixed(1)}`);
+                        if (ratingSource === 'Рейтинг') {
+                          ratingSource = 'IMDb';
+                        }
+                      }
+                    } catch (e) {
+                      console.error('Ошибка при обработке original_rating IMDb:', e);
+                    }
+                  }
+                  
+                  // Если у нас есть несколько рейтингов, вычисляем средний
+                  if (ratingValues.length > 1) {
+                    ratingValue = ratingValues.reduce((sum, val) => sum + val, 0) / ratingValues.length;
+                    ratingSource = 'Средний';
+                    console.log('Вычислен средний рейтинг из original_rating:', ratingValue, 'из значений:', ratingValues);
+                  } else if (ratingValues.length === 1) {
+                    ratingValue = ratingValues[0];
+                    console.log('Использован единственный доступный рейтинг из original_rating:', ratingValue);
+                  }
+                }
+              }
+              
+              // Проверяем другие возможные поля с рейтингами, если рейтинг все еще не найден
+              if (ratingValue === null || isNaN(ratingValue) || ratingValue <= 0) {
+                console.log('Проверяем альтернативные поля с рейтингами');
+                
+                if (movie.vote_average && movie.vote_average > 0) {
+                  try {
+                    ratingValue = parseFloat(movie.vote_average);
+                    if (!isNaN(ratingValue) && ratingValue > 0) {
+                      ratingSource = 'TMDB';
+                      ratingSourceDetails.push(`TMDB: ${ratingValue.toFixed(1)}`);
+                      console.log('Использован рейтинг из vote_average:', ratingValue);
+                    }
+                  } catch (e) {
+                    console.error('Ошибка при обработке vote_average:', e);
+                  }
+                } else if (movie.imdb_rating && movie.imdb_rating > 0) {
+                  try {
+                    ratingValue = parseFloat(movie.imdb_rating);
+                    if (!isNaN(ratingValue) && ratingValue > 0) {
+                      ratingSource = 'IMDb';
+                      ratingSourceDetails.push(`IMDb: ${ratingValue.toFixed(1)}`);
+                      console.log('Использован рейтинг из imdb_rating:', ratingValue);
+                    }
+                  } catch (e) {
+                    console.error('Ошибка при обработке imdb_rating:', e);
+                  }
+                } else if (movie.tmdb_rating && movie.tmdb_rating > 0) {
+                  try {
+                    ratingValue = parseFloat(movie.tmdb_rating);
+                    if (!isNaN(ratingValue) && ratingValue > 0) {
+                      ratingSource = 'TMDB';
+                      ratingSourceDetails.push(`TMDB: ${ratingValue.toFixed(1)}`);
+                      console.log('Использован рейтинг из tmdb_rating:', ratingValue);
+                    }
+                  } catch (e) {
+                    console.error('Ошибка при обработке tmdb_rating:', e);
+                  }
+                } else if (movie.kp_rating && movie.kp_rating > 0) {
+                  try {
+                    ratingValue = parseFloat(movie.kp_rating);
+                    if (!isNaN(ratingValue) && ratingValue > 0) {
+                      ratingSource = 'КиноПоиск';
+                      ratingSourceDetails.push(`КиноПоиск: ${ratingValue.toFixed(1)}`);
+                      console.log('Использован рейтинг из kp_rating:', ratingValue);
+                    }
+                  } catch (e) {
+                    console.error('Ошибка при обработке kp_rating:', e);
+                  }
+                }
+              }
+              
+              // Если есть явно указанный источник рейтинга
+              if (movie.rating_source && ratingValue !== null && !isNaN(ratingValue) && ratingValue > 0) {
+                ratingSource = movie.rating_source;
+                console.log('Использован источник рейтинга из rating_source:', ratingSource);
+              }
+              
+              // Выводим в консоль итоговое значение рейтинга и источник
+              console.log('Итоговое значение рейтинга:', ratingValue, 'Источник:', ratingSource);
+              console.log('Детали источников:', ratingSourceDetails);
+              
+              // Форматируем значение рейтинга
+              let formattedRating = 'Нет рейтинга';
+              
+              if (ratingValue !== null && !isNaN(ratingValue) && ratingValue > 0) {
+                formattedRating = parseFloat(ratingValue).toFixed(1);
+              }
+              
+              // Обновляем содержимое блока с рейтингом
+              let ratingHtml = `<h3>Рейтинг ${ratingSource}</h3>
+                <div class="detail-rating-value">
+                  <img src="/static/star.svg" alt="Рейтинг">
+                  <span>${formattedRating}</span>
+                </div>`;
+              
+              // Если есть детали по источникам, добавляем их
+              if (ratingSourceDetails.length > 1) {
+                ratingHtml += '<div class="rating-sources-details">';
+                ratingSourceDetails.forEach(detail => {
+                  ratingHtml += `<div class="rating-source-detail">${detail}</div>`;
+                });
+                ratingHtml += '</div>';
+              }
+              
+              ratingInfo.innerHTML = ratingHtml;
+              
+              // Вставляем блок с рейтингом после описания фильма
+              const descriptionElement = document.getElementById('detail-description');
+              descriptionElement.parentNode.insertBefore(ratingInfo, descriptionElement.nextSibling);
+              
+              // Скрываем блок с актерами в HTML
+              const movieCast = document.querySelector('.movie-cast');
+              if (movieCast) {
+                movieCast.style.display = 'none';
+            }
+            
+            // Загрузка комментариев
+            loadComments(movieId);
+            
+            // Загрузка рейтинга
+            loadRating(movieId);
+            
+            // Обработчики для звездочек рейтинга
+            setupRatingStars(movieId);
+            
+            // Обработчик для кнопки сохранения комментария
+            document.getElementById('save-comment-btn').onclick = function() {
+              saveComment(movieId);
+            };
+            
+            // Заполнение списка рекомендаций
+            const recommendationsList = document.getElementById('detail-recommendations');
+              recommendationsList.innerHTML = '<div class="loading-container"><div class="loading-animation"><div class="spinner"></div></div><div class="loading-text">Ищем похожие фильмы...</div></div>';
+              
+              // Используем описание фильма для поиска похожих фильмов
+              const searchQuery = description || title;
+              
+              // Выполняем поиск похожих фильмов с использованием векторного поиска (FAISS)
+              fetch(`/search_movies?query=${encodeURIComponent(searchQuery)}&search_mode=faiss&limit=10`)
+                .then(response => {
+                  if (!response.ok) {
+                    throw new Error('Ошибка при поиске похожих фильмов');
+                  }
+                  return response.json();
+                })
+                .then(similarMovies => {
+                  // Очищаем контейнер рекомендаций
+            recommendationsList.innerHTML = '';
+            
+                  // Фильтруем результаты, чтобы исключить текущий фильм
+                  const filteredMovies = similarMovies.filter(m => {
+                    if (!m || typeof m !== 'object') return false;
+                    const mId = m.id || m._id || '';
+                    return mId != movieId;
+                  });
+                  
+                  console.log(`Найдено ${filteredMovies.length} похожих фильмов для "${title}"`);
+                  
+                  if (filteredMovies.length > 0) {
+                    // Создаем контейнер для карточек фильмов
+                    const movieCardsContainer = document.createElement('div');
+                    movieCardsContainer.className = 'similar-movies-grid';
+                    
+                    // Добавляем карточки фильмов
+                    filteredMovies.forEach(movie => {
+                      // Создаем карточку фильма
+                      const movieCard = document.createElement('div');
+                      movieCard.className = 'movie-card';
+                      
+                      // Получаем название фильма
+                      const movieTitle = movie.name || movie.title || movie.alternativeName || 'Название отсутствует';
+                      
+                      // Получаем ID фильма
+                      let similarMovieId = movie.id || movie._id || '';
+                      if (!similarMovieId) {
+                        similarMovieId = movie.movie_id || movie.movieId || movie.tmdb_id || '';
+                        if (!similarMovieId && movieTitle !== 'Название отсутствует') {
+                          similarMovieId = 'temp_' + movieTitle.replace(/\s+/g, '_').toLowerCase();
+                        }
+                      }
+                      
+                      // Получаем жанры
+                      let genres = '';
+                      if (movie.genres) {
+                        if (Array.isArray(movie.genres)) {
+                          genres = movie.genres.slice(0, 2).join(', ');
+                        } else if (typeof movie.genres === 'string') {
+                          genres = movie.genres.split('|').slice(0, 2).join(', ');
+                        }
+                      }
+                      
+                      // Получаем рейтинг
+                      let rating = '';
+                      if (movie.rating) {
+                        let ratingValue = movie.rating;
+                        if (typeof ratingValue === 'string') {
+                          ratingValue = parseFloat(ratingValue).toFixed(1);
+                        } else if (typeof ratingValue === 'number') {
+                          ratingValue = ratingValue.toFixed(1);
+                        }
+                        
+                        rating = `<div class="movie-rating">
+                          <img src="/static/star.svg" alt="Рейтинг">
+                          <span>${ratingValue}</span>
+                        </div>`;
+                      }
+                      
+                      // Получаем постер
+                      let posterUrl = '/static/default-poster.jpg';
+                      if (movie.poster_path) {
+                        posterUrl = `https://image.tmdb.org/t/p/w500${movie.poster_path}`;
+                      } else if (movie.poster) {
+                        if (typeof movie.poster === 'string') {
+                          posterUrl = movie.poster;
+                        } else if (typeof movie.poster === 'object' && movie.poster.url) {
+                          posterUrl = movie.poster.url;
+                        } else if (typeof movie.poster === 'object' && movie.poster.previewUrl) {
+                          posterUrl = movie.poster.previewUrl;
+                        }
+                      }
+                      
+                      // Создаем HTML для карточки фильма
+                      movieCard.innerHTML = `
+                        <div class="movie-poster">
+                          <img src="${posterUrl}" alt="${movieTitle}" onerror="this.src='/static/default-poster.jpg'">
+                          <div class="like-button" data-movie-id="${similarMovieId}">
+                            <svg viewBox="0 0 24 24">
+                              <path d="M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.42,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.58,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z"></path>
+                            </svg>
+                          </div>
+                        </div>
+                        <div class="movie-title">${movieTitle}</div>
+                        <div class="movie-genres">${genres}</div>
+                        ${rating}
+                      `;
+                      
+                      // Добавляем обработчик клика
+                      movieCard.addEventListener('click', (e) => {
+                        // Если клик был по кнопке лайка, обрабатываем его отдельно
+                        if (e.target.closest('.like-button')) {
+                          e.stopPropagation();
+                          handleLikeClick(e.target.closest('.like-button'), similarMovieId);
+                        } else {
+                          // Иначе показываем детали фильма
+                  movieDetails.style.display = 'none';
+                          showMovieDetails(similarMovieId);
+                        }
+                      });
+                      
+                      // Добавляем карточку в контейнер
+                      movieCardsContainer.appendChild(movieCard);
+                      
+                      // Проверяем, лайкнут ли фильм
+                      checkIfMovieLiked(similarMovieId);
+                    });
+                    
+                    // Добавляем контейнер с карточками в список рекомендаций
+                    recommendationsList.appendChild(movieCardsContainer);
+            } else {
+                    recommendationsList.innerHTML = '<p>Нет похожих фильмов</p>';
+            }
+                })
+                .catch(error => {
+                  console.error('Ошибка при поиске похожих фильмов:', error);
+                  recommendationsList.innerHTML = '<p>Ошибка при поиске похожих фильмов</p>';
+                });
+            
+            movieDetails.style.display = 'block';
+          })
+          .catch(error => {
+            console.error('Ошибка при загрузке деталей фильма:', error);
+            alert('Произошла ошибка при загрузке деталей фильма. Пожалуйста, попробуйте позже.');
+            });
+        }).catch(error => {
+          console.error('Ошибка при получении ID пользователя:', error);
+          alert('Произошла ошибка при получении ID пользователя. Пожалуйста, обновите страницу.');
+          });
+      }
+      
+      // Функция для загрузки комментариев к фильму
+      function loadComments(movieId) {
+        const commentsContainer = document.getElementById('user-comments');
+        commentsContainer.innerHTML = '<div class="loading">Загрузка комментариев...</div>';
+        
+        // Загрузка комментариев с сервера
+        fetch(`/get_comments/${movieId}`)
+          .then(response => {
+            if (!response.ok) {
+              throw new Error('Failed to load comments');
+            }
+            return response.json();
+          })
+          .then(data => {
+            commentsContainer.innerHTML = '';
+            
+            if (data && data.comments && data.comments.length > 0) {
+              data.comments.forEach(comment => {
+                const commentElement = document.createElement('div');
+                commentElement.className = 'user-comment';
+                commentElement.innerHTML = `
+                  <div class="comment-header">
+                    <span class="comment-user">${comment.user_id}</span>
+                    <span class="comment-date">${new Date(comment.created_at).toLocaleDateString()}</span>
+                  </div>
+                  <div class="comment-text">${comment.text}</div>
+                `;
+                commentsContainer.appendChild(commentElement);
+              });
+            } else {
+              commentsContainer.innerHTML = '<div class="no-comments">Комментариев пока нет. Будьте первым!</div>';
+            }
+          })
+          .catch(error => {
+            console.error('Ошибка при загрузке комментариев:', error);
+            commentsContainer.innerHTML = '<div class="error-comments">Произошла ошибка при загрузке комментариев</div>';
+          });
+      }
+      
+      // Функция для сохранения комментария
+      function saveComment(movieId) {
+        const commentText = document.getElementById('movie-comment').value.trim();
+        if (!commentText) {
+          alert('Пожалуйста, введите комментарий');
+          return;
+        }
+        
+        if (!userId) {
+          getUserId().then(id => {
+            saveCommentWithUserId(id, movieId, commentText);
+          });
+        } else {
+          saveCommentWithUserId(userId, movieId, commentText);
+        }
+      }
+      
+      // Вспомогательная функция для сохранения комментария
+      function saveCommentWithUserId(userId, movieId, commentText) {
+        // Отправляем комментарий на сервер
+        fetch('/save_comment', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            user_id: userId,
+            movie_id: movieId,
+            comment: commentText
+          })
+        })
+          .then(response => {
+            if (!response.ok) {
+              throw new Error('Failed to save comment');
+            }
+            return response.json();
+          })
+          .then(data => {
+            if (data.status === 'success') {
+              loadComments(movieId); // Перезагружаем комментарии
+            } else {
+              alert('Ошибка при сохранении комментария');
+            }
+          })
+          .catch(error => {
+            console.error('Ошибка при сохранении комментария:', error);
+            alert('Произошла ошибка при сохранении комментария');
+          });
+      }
+      
+      // Функция для загрузки рейтинга фильма
+      function loadRating(movieId) {
+        if (!userId) {
+          getUserId().then(id => {
+            loadRatingWithUserId(id, movieId);
+          });
+        } else {
+          loadRatingWithUserId(userId, movieId);
+        }
+      }
+      
+      // Вспомогательная функция для загрузки рейтинга с определенным ID пользователя
+      function loadRatingWithUserId(userId, movieId) {
+        // Загрузка рейтинга с сервера
+        fetch(`/get_user_rating/${userId}/${movieId}`)
+          .then(response => {
+            if (!response.ok) {
+              throw new Error('Failed to load rating');
+            }
+            return response.json();
+          })
+          .then(data => {
+            const userRating = data.rating;
+            
+            if (userRating) {
+              // Устанавливаем выбранные звезды
+              const stars = document.querySelectorAll('.star');
+              stars.forEach(star => {
+                const value = parseInt(star.getAttribute('data-value'));
+                if (value <= userRating) {
+                  star.classList.add('active');
+                } else {
+                  star.classList.remove('active');
+                }
+              });
+              
+              // Обновляем текст рейтинга
+              document.getElementById('rating-value').textContent = `Ваша оценка: ${userRating} из 5`;
+            } else {
+              // Сбрасываем все звезды
+              const stars = document.querySelectorAll('.star');
+              stars.forEach(star => {
+                star.classList.remove('active');
+              });
+              
+              document.getElementById('rating-value').textContent = 'Не оценено';
+            }
+          })
+          .catch(error => {
+            console.error('Ошибка при загрузке рейтинга:', error);
+            alert('Произошла ошибка при загрузке рейтинга. Пожалуйста, попробуйте позже.');
+          });
+      }
+      
+      // Настройка обработчиков для звездочек рейтинга
+      function setupRatingStars(movieId) {
+        const stars = document.querySelectorAll('.star');
+        const ratingValue = document.getElementById('rating-value');
+        
+        stars.forEach(star => {
+          // Обработчик наведения мыши
+          star.onmouseover = function() {
+            const value = parseInt(this.getAttribute('data-value'));
+            highlightStars(value);
+            ratingValue.textContent = `Оценить: ${value} из 5`;
+          };
+          
+          // Обработчик увода мыши
+          star.onmouseout = function() {
+            // Вернуть текущий рейтинг, если он есть
+            loadRating(movieId);
+          };
+          
+          // Обработчик клика
+          star.onclick = function() {
+            const value = parseInt(this.getAttribute('data-value'));
+            saveRating(movieId, value);
+          };
+        });
+      }
+      
+      // Функция для подсветки звезд при наведении
+      function highlightStars(count) {
+        const stars = document.querySelectorAll('.star');
+        stars.forEach(star => {
+          const value = parseInt(star.getAttribute('data-value'));
+          if (value <= count) {
+            star.classList.add('active');
+          } else {
+            star.classList.remove('active');
+          }
+        });
+      }
+      
+      // Функция для сохранения рейтинга
+      function saveRating(movieId, rating) {
+        if (!userId) {
+          getUserId().then(id => {
+            saveRatingWithUserId(id, movieId, rating);
+          });
+        } else {
+          saveRatingWithUserId(userId, movieId, rating);
+        }
+      }
+      
+      // Вспомогательная функция для сохранения рейтинга с определенным ID пользователя
+      function saveRatingWithUserId(userId, movieId, rating) {
+        // Сохранение рейтинга на сервере
+        fetch('/save_rating', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            user_id: userId,
+            movie_id: movieId,
+            rating: rating
+          })
+        })
+          .then(response => {
+            if (!response.ok) {
+              throw new Error('Failed to save rating');
+            }
+            return response.json();
+          })
+          .then(data => {
+            if (data.status === 'success') {
+              loadRating(movieId); // Перезагружаем рейтинг
+            } else {
+              alert('Ошибка при сохранении рейтинга');
+            }
+          })
+          .catch(error => {
+            console.error('Ошибка при сохранении рейтинга:', error);
+            alert('Произошла ошибка при сохранении рейтинга');
+          });
+      }
+      
+      // Функция для обработки клика по кнопке лайка
+      function handleLikeClick(likeButton, movieId) {
+        if (!userId) {
+          getUserId().then(id => {
+            handleLikeClickWithUserId(id, likeButton, movieId);
+          });
+        } else {
+          handleLikeClickWithUserId(userId, likeButton, movieId);
+        }
+      }
+      
+      // Вспомогательная функция для обработки лайка с определенным ID пользователя
+      function handleLikeClickWithUserId(userId, likeButton, movieId) {
+        // Если movieId не передан, пробуем получить его из атрибута data-movie-id кнопки
+        if (!movieId && likeButton) {
+          movieId = likeButton.getAttribute('data-movie-id');
+          console.log('Получен ID фильма из атрибута кнопки:', movieId);
+        }
+        
+        // Нормализуем ID фильма, чтобы он был совместим с обоими режимами поиска
+        if (!movieId) {
+          console.error('Movie ID is empty or undefined');
+          alert('Ошибка: ID фильма не найден');
+          return;
+        }
+        
+        // Логируем данные для отладки
+        console.log('Лайк/анлайк фильма:', { userId, movieId });
+        
+        // Немедленно меняем визуальное состояние кнопки для мгновенной обратной связи
+        const isCurrentlyLiked = likeButton.classList.contains('active');
+        
+        if (isCurrentlyLiked) {
+          // Если фильм уже лайкнут, удаляем лайк
+          likeButton.classList.remove('active');
+          
+          // Удаляем фильм из списка лайкнутых в localStorage
+          const likedMovies = JSON.parse(localStorage.getItem('likedMovies') || '[]');
+          const updatedLikedMovies = likedMovies.filter(id => id !== movieId);
+          localStorage.setItem('likedMovies', JSON.stringify(updatedLikedMovies));
+          
+          // Отправляем запрос на сервер для удаления лайка
+          fetch('/unlike_movie', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ user_id: userId, movie_id: movieId })
+          })
+          .then(response => {
+            if (!response.ok) {
+              // Если произошла ошибка, возвращаем визуальное состояние
+              likeButton.classList.add('active');
+              throw new Error('Failed to unlike movie');
+            }
+            return response.json();
+          })
+          .then(data => {
+            console.log('Movie unliked successfully:', data);
+            // Обновляем рекомендации, но не показываем их автоматически
+            updateRecommendations(false);
+          })
+          .catch(error => {
+            console.error('Error unliking movie:', error);
+            // Возвращаем визуальное состояние в случае ошибки
+            likeButton.classList.add('active');
+            alert('Произошла ошибка при удалении лайка. Пожалуйста, попробуйте позже.');
+          });
+        } else {
+          // Если фильм не лайкнут, добавляем лайк
+          likeButton.classList.add('active');
+          
+          // Добавляем фильм в список лайкнутых в localStorage
+          const likedMovies = JSON.parse(localStorage.getItem('likedMovies') || '[]');
+          if (!likedMovies.includes(movieId)) {
+            likedMovies.push(movieId);
+            localStorage.setItem('likedMovies', JSON.stringify(likedMovies));
+          }
+          
+          // Отправляем запрос на сервер для добавления лайка
+          fetch('/like_movie', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ user_id: userId, movie_id: movieId })
+          })
+          .then(response => {
+            if (!response.ok) {
+              // Если произошла ошибка, возвращаем визуальное состояние
+              likeButton.classList.remove('active');
+              throw new Error('Failed to like movie');
+            }
+            return response.json();
+          })
+          .then(data => {
+            console.log('Movie liked successfully:', data);
+            // Обновляем рекомендации, но не показываем их автоматически
+            updateRecommendations(false);
+          })
+          .catch(error => {
+            console.error('Error liking movie:', error);
+            // Возвращаем визуальное состояние в случае ошибки
+            likeButton.classList.remove('active');
+            alert('Произошла ошибка при добавлении лайка. Пожалуйста, попробуйте позже.');
+          });
+        }
+      }
+      
+      // Функция для проверки, лайкнут ли фильм
+      function checkIfMovieLiked(movieId) {
+        // Проверяем, что movieId не пустой
+        if (!movieId) {
+          console.error('Попытка проверить лайк для пустого ID фильма');
+          return;
+        }
+        
+        const likedMovies = JSON.parse(localStorage.getItem('likedMovies') || '[]');
+        const isLiked = likedMovies.includes(movieId);
+        
+        // Если фильм лайкнут, добавляем класс active
+        const likeButton = document.querySelector(`.like-button[data-movie-id="${movieId}"]`);
+        if (likeButton) {
+          if (isLiked) {
+            likeButton.classList.add('active');
+          } else {
+            likeButton.classList.remove('active');
+          }
+        }
+      }
+      
+      // Функция для обновления рекомендаций
+      function updateRecommendations(showRecommendations = false) {
+        // Сбрасываем флаг загрузки рекомендаций
+        recommendationsLoaded = false;
+        
+        // Получаем userId из localStorage или получаем его асинхронно если его нет
+        let userId = localStorage.getItem('userId');
+        if (!userId) {
+          // Если userId нет, получаем его и затем загружаем рекомендации
+          getUserId()
+            .then(id => {
+              console.log(`Обновление рекомендаций для пользователя ${id}`);
+              
+              // Всегда загружаем рекомендации, независимо от showRecommendations
+              loadRecommendations();
+              
+              // Если требуется показать рекомендации, показываем их
+              if (showRecommendations) {
+                recommendationsSection.style.display = 'block';
+                }
+            })
+            .catch(error => {
+              console.error('Ошибка при получении ID пользователя:', error);
+            });
+        } else {
+          console.log(`Обновление рекомендаций для пользователя ${userId}`);
+          
+          // Всегда загружаем рекомендации, независимо от showRecommendations
+          loadRecommendations();
+          
+          // Если требуется показать рекомендации, показываем их
+        if (showRecommendations) {
+            recommendationsSection.style.display = 'block';
+          }
+        }
+      }
+
+      // Функция для адаптации интерфейса под мобильные устройства
+      function adjustForMobile() {
+        const isMobile = window.innerWidth <= 768;
+        
+        // Настройка высоты выпадающих списков фильтров для мобильных устройств
+        if (isMobile) {
+          document.querySelectorAll('.filter-content').forEach(content => {
+            content.style.maxHeight = '200px';
+          });
+        } else {
+          document.querySelectorAll('.filter-content').forEach(content => {
+            content.style.maxHeight = '';
+          });
+        }
+      }
+      
+      
+      // Вызываем функцию при загрузке страницы и при изменении размера окна
+      window.addEventListener('load', adjustForMobile);
+      window.addEventListener('resize', adjustForMobile);
+
+      // Обработчик для кнопки удаления всех лайков
+      removeAllLikesButton.addEventListener('click', function() {
+        if (!userId) {
+          getUserId().then(id => {
+            if (confirm('Вы уверены, что хотите удалить все лайки? Это действие нельзя отменить.')) {
+              removeAllLikesWithUserId(id);
+        }
+          });
+        } else {
+        if (confirm('Вы уверены, что хотите удалить все лайки? Это действие нельзя отменить.')) {
+            removeAllLikesWithUserId(userId);
+          }
+        }
+      });
+
+      // Функция для удаления всех лайков
+      function removeAllLikesWithUserId(userId) {
+        fetch('/remove_all_likes', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ user_id: userId })
+        })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Ошибка при удалении лайков');
+          }
+          return response.json();
+        })
+        .then(data => {
+          console.log('Все лайки удалены:', data);
+          
+          // Очищаем локальное хранилище
+          localStorage.setItem('likedMovies', JSON.stringify([]));
+          
+          // Обновляем UI
+          const likeButtons = document.querySelectorAll('.like-button');
+          likeButtons.forEach(button => {
+            button.classList.remove('active');
+          });
+          
+          // Перезагружаем рекомендации
+          loadRecommendations();
+          
+          // Показываем сообщение
+          alert('Все лайки успешно удалены');
+        })
+        .catch(error => {
+          console.error('Ошибка при удалении всех лайков:', error);
+          alert('Произошла ошибка при удалении лайков. Пожалуйста, попробуйте позже.');
+        });
+      }
+
+      // Функция для отображения рекомендаций
+      function displayRecommendations(movies, container) {
+        // Очищаем контейнер
+        container.innerHTML = '';
+        
+        if (!movies || movies.length === 0) {
+          container.innerHTML = '<div class="no-recommendations">Лайкните несколько фильмов, чтобы получить рекомендации.</div>';
+          return;
+        }
+        
+        // Логируем для отладки все фильмы
+        console.log('Получено рекомендаций:', movies.length);
+        console.log('Пример фильма из рекомендаций:', movies[0]);
+        
+        // Добавляем каждый рекомендованный фильм в сетку (в том же формате, что и в основной сетке)
+        movies.forEach((movie, index) => {
+          const movieCard = document.createElement('div');
+          movieCard.className = 'movie-card';
+          
+          // Получаем название фильма
+          const title = movie.title || movie.name || movie.alternativeName || 'Название отсутствует';
+          
+          // Получаем ID фильма
+          let movieId = movie._id || movie.id || '';
+          
+          // Если ID все еще пустой, пробуем другие возможные поля или генерируем временный ID
+          if (!movieId) {
+            // Пробуем другие возможные поля
+            movieId = movie.movie_id || movie.movieId || movie.tmdb_id || '';
+            
+            // Если ID все еще пустой, используем хеш от названия фильма как временный ID
+            if (!movieId && title !== 'Название отсутствует') {
+              movieId = 'temp_' + title.replace(/\s+/g, '_').toLowerCase();
+              console.log('Сгенерирован временный ID для фильма в рекомендациях:', title, movieId);
+            }
+          }
+          
+          // Получаем жанры
+          let genres = '';
+          if (movie.genres) {
+            if (Array.isArray(movie.genres)) {
+              genres = movie.genres.slice(0, 2).join(', ');
+            } else if (typeof movie.genres === 'string') {
+              genres = movie.genres.split('|').slice(0, 2).join(', ');
+            }
+          }
+          
+          // Получаем рейтинг
+          let rating = '';
+          if (movie.rating) {
+            let ratingValue = movie.rating;
+            if (typeof ratingValue === 'object') {
+              ratingValue = ratingValue.kp || ratingValue.imdb || 0;
+            }
+            if (typeof ratingValue === 'string') {
+              ratingValue = parseFloat(ratingValue).toFixed(1);
+            } else if (typeof ratingValue === 'number') {
+              ratingValue = ratingValue.toFixed(1);
+            }
+            
+            rating = `<div class="movie-rating">
+              <img src="/static/star.svg" alt="Рейтинг">
+              <span>${ratingValue}</span>
+            </div>`;
+          }
+          
+          // Расширенная обработка постера
+          let posterUrl = '/static/default-poster.jpg';
+          
+          // Логируем все поля для постера
+          console.log(`Фильм #${index} "${title}" (ID: ${movieId}):`);
+          console.log('  poster:', movie.poster);
+          console.log('  poster_path:', movie.poster_path);
+          console.log('  backdrop:', movie.backdrop);
+          console.log('  logo:', movie.logo);
+          
+          // Проверяем все возможные поля для постера
+          if (movie.poster_path) {
+            posterUrl = `https://image.tmdb.org/t/p/w500${movie.poster_path}`;
+            console.log(`  Использую poster_path: ${posterUrl}`);
+          } else if (movie.poster) {
+            if (typeof movie.poster === 'string') {
+              posterUrl = movie.poster;
+              console.log(`  Использую poster(string): ${posterUrl}`);
+            } else if (typeof movie.poster === 'object') {
+              if (movie.poster.url) {
+                posterUrl = movie.poster.url;
+                console.log(`  Использую poster.url: ${posterUrl}`);
+              } else if (movie.poster.previewUrl) {
+                posterUrl = movie.poster.previewUrl;
+                console.log(`  Использую poster.previewUrl: ${posterUrl}`);
+              }
+            }
+          } else if (movie.backdrop) {
+            if (typeof movie.backdrop === 'string') {
+              posterUrl = movie.backdrop;
+              console.log(`  Использую backdrop(string): ${posterUrl}`);
+            } else if (typeof movie.backdrop === 'object' && movie.backdrop.url) {
+              posterUrl = movie.backdrop.url;
+              console.log(`  Использую backdrop.url: ${posterUrl}`);
+            }
+          } else if (movie.logo) {
+            if (typeof movie.logo === 'string') {
+              posterUrl = movie.logo;
+              console.log(`  Использую logo(string): ${posterUrl}`);
+            } else if (typeof movie.logo === 'object' && movie.logo.url) {
+              posterUrl = movie.logo.url;
+              console.log(`  Использую logo.url: ${posterUrl}`);
+            }
+          } else {
+            console.log(`  Использую дефолтный постер`);
+          }
+            
+          movieCard.innerHTML = `
+            <div class="movie-poster">
+              <img src="${posterUrl}" alt="${title}" onerror="this.src='/static/default-poster.jpg'">
+              <div class="like-button" data-movie-id="${movieId}">
+                <svg viewBox="0 0 24 24">
+                  <path d="M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.42,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.58,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z"></path>
+                </svg>
+              </div>
+            </div>
+            <div class="movie-title">${title}</div>
+            <div class="movie-genres">${genres}</div>
+            ${rating}
+          `;
+          
+          movieCard.addEventListener('click', (e) => {
+            // Если клик был по кнопке лайка, обрабатываем его отдельно
+            if (e.target.closest('.like-button')) {
+              e.stopPropagation();
+              handleLikeClick(e.target.closest('.like-button'), movieId);
+          } else {
+              // Иначе показываем детали фильма
+              showMovieDetails(movieId);
+            }
+          });
+          
+          container.appendChild(movieCard);
+          
+          // Проверяем, лайкнут ли фильм
+          checkIfMovieLiked(movieId);
+        });
+        
+        // Устанавливаем флаг загрузки рекомендаций
+        recommendationsLoaded = true;
+      }
+    });
+  </script>
+</body>
+</html>
+
+

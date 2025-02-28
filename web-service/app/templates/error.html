@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ошибка | Подсажем</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background-color: #f5f5f5;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      color: #333;
+    }
+    
+    .error-container {
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      padding: 40px;
+      text-align: center;
+      max-width: 600px;
+      width: 90%;
+    }
+    
+    h1 {
+      color: #e74c3c;
+      margin-bottom: 20px;
+    }
+    
+    p {
+      margin-bottom: 30px;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+    
+    .back-button {
+      background-color: #3498db;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 4px;
+      font-size: 16px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background-color 0.3s;
+    }
+    
+    .back-button:hover {
+      background-color: #2980b9;
+    }
+    
+    .error-code {
+      font-size: 36px;
+      font-weight: bold;
+      margin-bottom: 10px;
+      color: #e74c3c;
+    }
+    
+    .error-img {
+      max-width: 200px;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="error-container">
+    <div class="error-code">Ошибка</div>
+    <h1>Что-то пошло не так</h1>
+    <p>{{ error }}</p>
+    <a href="/" class="back-button">Вернуться на главную</a>
+  </div>
+</body>
+</html> 
