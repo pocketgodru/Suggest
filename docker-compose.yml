@@ -1,0 +1,88 @@
+services:
+  web:
+    build: ./web-service
+    ports:
+      - "5000:5000"
+    environment:
+      - SEARCH_SERVICE_URL=http://search:5002
+      - DATABASE_SERVICE_URL=http://database:5001
+    depends_on:
+      - search
+      - database
+    volumes:
+      - ./web-service/app:/app
+    networks:
+      - movie_network
+
+  search:
+    build:
+      context: .
+      dockerfile: search-service/Dockerfile
+    ports:
+      - "5002:5002"
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017
+      - MONGO_DB=movies_db
+      - MONGO_COLLECTION=movies
+    depends_on:
+      - mongodb
+    volumes:
+      - ./search-service/app/search_service.py:/app/search_service.py
+      - ./search-service/app/turbo_search.py:/app/turbo_search.py
+      - ./model_cache:/app/model_cache
+      - ./movies_embeddings.npy:/app/movies_embeddings.npy
+    networks:
+      - movie_network
+
+  database:
+    build:
+      context: .
+      dockerfile: database-service/Dockerfile
+    ports:
+      - "5001:5001"
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017
+      - MONGO_DB=movies_db
+      - MONGO_COLLECTION=movies
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+    depends_on:
+      mongodb:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    networks:
+      - movie_network
+
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - movie_network
+
+  redis:
+    image: redis/redis-stack:latest
+    ports:
+      - "6379:6379"
+      - "8001:8001"
+    volumes:
+      - redis_data:/data
+    networks:
+      - movie_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  mongodb_data:
+  redis_data:
+
+networks:
+  movie_network:
+    driver: bridge 

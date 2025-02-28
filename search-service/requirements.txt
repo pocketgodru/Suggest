@@ -1,0 +1,8 @@
+flask==3.0.2
+faiss-cpu==1.7.4
+sentence-transformers==2.5.1
+numpy==1.26.4
+python-dotenv==1.0.1
+pymongo==4.6.1
+redis==5.0.1
+transformers==4.37.2 

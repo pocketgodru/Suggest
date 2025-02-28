@@ -1,0 +1,176 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+@font-face {
+    font-family: "Nuqun-Regular";
+    src: url("../static/Nuqun-Regular.otf");
+    font-style: normal;
+    font-weight: 400;
+}
+
+body, html {
+    width: 100%;
+    height: 100%;
+    font-family: Nuqun-Regular, sans-serif;
+    background-color: #000;
+}
+
+table {
+    width: 100%;
+    height: 100vh;
+    border-collapse: collapse;
+    background-image: url("../static/╨│╨╗╨░╨▓╨╜╨░╤П ╨╖╨░╨╗╤Г╨┐╨║╨░.png");
+    background-repeat: no-repeat;
+    background-size: cover;
+}
+
+td {
+    width: 100%;
+    height: 100vh;
+    position: relative;
+}
+
+.hi_user {
+    background-color: rgba(165, 81, 239, 0.4);
+    width: 70%;
+    height: 45vh;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 30px;
+    display: flex;
+    flex-direction: column;
+    justify-content: left;
+    text-align: left;
+    color: white;
+}
+
+.hi_user p:first-child {
+    left: 5%;
+    top: 5%;
+    position: relative;
+    font-size: 11vw;
+    font-weight: bold;
+}
+
+.p_1 {
+    left: 5%;
+    top: 5%;
+    position: relative;
+    font-size: 3vw;
+    margin-top: 10px;
+}
+
+.hi_user p span {
+    color: #FFF294;
+}
+
+.button-start {
+    position: relative;
+    width: 40%;
+    margin-left: auto;
+    margin-right: auto;
+    background-color: #EE9B89;
+    border: none;
+    border-radius: 20px;
+    padding: 19px 30px;
+    font-size: 2.7vw;
+    color: white;
+    cursor: pointer;
+    margin-top: 20px;
+    top: 20%;
+}
+
+.search-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+
+.search-wrapper {
+    position: relative;
+    width: 57%;
+}
+
+.search-wrapper input {
+    width: 100%;
+    padding: 21px;
+    background-color: #FFE5E0;
+    font-size: 1.6vw;
+    border-radius: 10px;
+    border: none;
+    outline: none;
+    padding-right: 50px; /* Отступ для иконки */
+}
+
+.search-icon {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 25px;
+    height: 25px;
+    cursor: pointer;
+}
+
+#search-section p {
+    color: #A29693; 
+    margin-top: 15px;
+    font-size: 2.5vw;
+}
+
+.footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: #1E0E2D;
+    color: white;
+    padding: 20px;
+    text-align: left;
+}
+
+.footer-title {
+    font-size: 2.5vw;
+    margin-bottom: 10px;
+}
+
+.footer-subtitle {
+    font-size: 1vw;
+    color: #ccc;
+}
+
+@media (max-width: 700px) {
+    .hi_user p:first-child {
+        font-size: 15vw;
+    }
+    .p_1 {
+        font-size: 8vw;
+    }
+    .button-start {
+        font-size: 5vw;
+        width: 60%;
+    
+    }
+    .search-wrapper{
+        width: 80%;
+    }
+    .search-wrapper input {
+        font-size: 5vw;
+    }
+    #search-section p {
+        font-size: 3.5vw;
+    }
+    .footer-title {
+        font-size: 6vw;
+    }
+    .footer-subtitle {
+        font-size: 3vw;
+    }
+}
