@@ -32,7 +32,7 @@ def auto_sync_mongodb_to_redis():
     Запускается в отдельном потоке для проверки и синхронизации данных.
     """
     # Задержка перед первой синхронизацией, чтобы дать время Redis полностью запуститься
-    time.sleep(10)  
+    time.sleep(30)  
     
     try:
         # Проверяем, нужна ли синхронизация (если в Redis нет данных)
@@ -306,7 +306,6 @@ def get_recommendations(user_id):
         # Получаем рекомендации на основе лайкнутых фильмов
         recommended_movies = redis_client.get_recommendations(liked_movie_ids, limit=10)
         app.logger.info(f"Получены рекомендации для пользователя {user_id}: {len(recommended_movies)} фильмов")
-        
         return jsonify({"movies": recommended_movies, "total": len(recommended_movies)})
     except Exception as e:
         app.logger.error(f"Ошибка при получении рекомендаций: {str(e)}")

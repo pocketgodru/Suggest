@@ -7,6 +7,7 @@ from flask_cors import CORS
 import uuid
 import threading
 import time
+import json
 
 # Загружаем переменные окружения
 load_dotenv()
@@ -203,6 +204,48 @@ def search_movies_api():
                     "category": movie.get("category", ""),
                     "status": movie.get("status", None)
                 }
+                
+                # Обработка постера
+                poster = movie.get("poster")
+                if not poster:
+                    transformed_movie["poster"] = {
+                        "url": "/static/default-poster.jpg",
+                        "previewUrl": "/static/default-poster.jpg"
+                    }
+                elif isinstance(poster, str):
+                    if poster.startswith("{") and poster.endswith("}"):
+                        try:
+                            poster_dict = json.loads(poster.replace("'", '"'))
+                            if isinstance(poster_dict, dict):
+                                transformed_movie["poster"] = poster_dict
+                            else:
+                                transformed_movie["poster"] = {
+                                    "url": str(poster),
+                                    "previewUrl": str(poster)
+                                }
+                        except:
+                            transformed_movie["poster"] = {
+                                "url": str(poster),
+                                "previewUrl": str(poster)
+                            }
+                    else:
+                        transformed_movie["poster"] = {
+                            "url": str(poster),
+                            "previewUrl": str(poster)
+                        }
+                elif isinstance(poster, dict):
+                    if "url" not in poster:
+                        transformed_movie["poster"] = {
+                            "url": "/static/default-poster.jpg",
+                            "previewUrl": "/static/default-poster.jpg"
+                        }
+                    else:
+                        transformed_movie["poster"] = poster
+                else:
+                    transformed_movie["poster"] = {
+                        "url": "/static/default-poster.jpg",
+                        "previewUrl": "/static/default-poster.jpg"
+                    }
                 
                 # Логируем для отладки структуру movie
                 logger.debug(f"Обрабатываем фильм: id={movie.get('id')}, name={movie.get('name')}")
@@ -676,6 +719,48 @@ def get_recommendations_api(user_id):
                 "category": movie.get("category", ""),
                 "status": movie.get("status", None)
             }
+            
+            # Обработка постера
+            poster = movie.get("poster")
+            if not poster:
+                transformed_movie["poster"] = {
+                    "url": "/static/default-poster.jpg",
+                    "previewUrl": "/static/default-poster.jpg"
+                }
+            elif isinstance(poster, str):
+                if poster.startswith("{") and poster.endswith("}"):
+                    try:
+                        poster_dict = json.loads(poster.replace("'", '"'))
+                        if isinstance(poster_dict, dict):
+                            transformed_movie["poster"] = poster_dict
+                        else:
+                            transformed_movie["poster"] = {
+                                "url": str(poster),
+                                "previewUrl": str(poster)
+                            }
+                    except:
+                        transformed_movie["poster"] = {
+                            "url": str(poster),
+                            "previewUrl": str(poster)
+                        }
+                else:
+                    transformed_movie["poster"] = {
+                        "url": str(poster),
+                        "previewUrl": str(poster)
+                    }
+            elif isinstance(poster, dict):
+                if "url" not in poster:
+                    transformed_movie["poster"] = {
+                        "url": "/static/default-poster.jpg",
+                        "previewUrl": "/static/default-poster.jpg"
+                    }
+                else:
+                    transformed_movie["poster"] = poster
+            else:
+                transformed_movie["poster"] = {
+                    "url": "/static/default-poster.jpg",
+                    "previewUrl": "/static/default-poster.jpg"
+                }
             
             # Логируем для отладки
             logger.debug(f"Обрабатываем фильм для рекомендаций: id={movie.get('id')}, name={movie.get('name')}")

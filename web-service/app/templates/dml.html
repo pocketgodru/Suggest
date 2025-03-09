@@ -1922,6 +1922,7 @@
 
       // Функция для отображения рекомендаций
       function displayRecommendations(movies, container) {
+        console.log(movies);
         // Очищаем контейнер
         container.innerHTML = '';
         
@@ -1934,7 +1935,7 @@
         console.log('Получено рекомендаций:', movies.length);
         console.log('Пример фильма из рекомендаций:', movies[0]);
         
-        // Добавляем каждый рекомендованный фильм в сетку (в том же формате, что и в основной сетке)
+        // Добавляем каждый рекомендованный фильм в сетку
         movies.forEach((movie, index) => {
           const movieCard = document.createElement('div');
           movieCard.className = 'movie-card';
@@ -1944,13 +1945,8 @@
           
           // Получаем ID фильма
           let movieId = movie._id || movie.id || '';
-          
-          // Если ID все еще пустой, пробуем другие возможные поля или генерируем временный ID
           if (!movieId) {
-            // Пробуем другие возможные поля
             movieId = movie.movie_id || movie.movieId || movie.tmdb_id || '';
-            
-            // Если ID все еще пустой, используем хеш от названия фильма как временный ID
             if (!movieId && title !== 'Название отсутствует') {
               movieId = 'temp_' + title.replace(/\s+/g, '_').toLowerCase();
               console.log('Сгенерирован временный ID для фильма в рекомендациях:', title, movieId);
@@ -1980,62 +1976,79 @@
               ratingValue = ratingValue.toFixed(1);
             }
             
-            rating = `<div class="movie-rating">
-              <img src="/static/star.svg" alt="Рейтинг">
-              <span>${ratingValue}</span>
-            </div>`;
+            if (!isNaN(ratingValue) && ratingValue > 0) {
+              rating = `<div class="movie-rating">
+                <img src="/static/star.svg" alt="Рейтинг">
+                <span>${ratingValue}</span>
+              </div>`;
+            }
           }
           
-          // Расширенная обработка постера
+          // Улучшенная обработка постера
           let posterUrl = '/static/default-poster.jpg';
+          let posterFound = false;
           
-          // Логируем все поля для постера
-          console.log(`Фильм #${index} "${title}" (ID: ${movieId}):`);
-          console.log('  poster:', movie.poster);
-          console.log('  poster_path:', movie.poster_path);
-          console.log('  backdrop:', movie.backdrop);
-          console.log('  logo:', movie.logo);
+          console.log(`Обработка постера для фильма "${title}" (ID: ${movieId}):`);
           
-          // Проверяем все возможные поля для постера
-          if (movie.poster_path) {
-            posterUrl = `https://image.tmdb.org/t/p/w500${movie.poster_path}`;
-            console.log(`  Использую poster_path: ${posterUrl}`);
-          } else if (movie.poster) {
-            if (typeof movie.poster === 'string') {
+          // Функция для проверки валидности URL
+          const isValidImageUrl = (url) => {
+            if (!url) return false;
+            try {
+              new URL(url);
+              return url.includes('image.openmoviedb.com') || // Основной источник постеров
+                    url.includes('image.tmdb.org') ||        // Альтернативный источник
+                    /\.(jpg|jpeg|png|webp)$/i.test(url);    // Общая проверка расширений
+            } catch {
+              return false;
+            }
+          };
+          
+          // 1. Сначала проверяем poster.previewUrl (оптимизированная версия)
+          if (!posterFound && movie.poster && typeof movie.poster === 'object' && movie.poster.previewUrl) {
+            if (isValidImageUrl(movie.poster.previewUrl)) {
+              posterUrl = movie.poster.previewUrl;
+              posterFound = true;
+              console.log(`  Использую poster.previewUrl: ${posterUrl}`);
+            }
+          }
+          
+          // 2. Затем проверяем poster.url (оригинальная версия)
+          if (!posterFound && movie.poster && typeof movie.poster === 'object' && movie.poster.url) {
+            if (isValidImageUrl(movie.poster.url)) {
+              posterUrl = movie.poster.url;
+              posterFound = true;
+              console.log(`  Использую poster.url: ${posterUrl}`);
+            }
+          }
+          
+          // 3. Проверяем строковый poster (для обратной совместимости)
+          if (!posterFound && movie.poster && typeof movie.poster === 'string') {
+            if (isValidImageUrl(movie.poster)) {
               posterUrl = movie.poster;
+              posterFound = true;
               console.log(`  Использую poster(string): ${posterUrl}`);
-            } else if (typeof movie.poster === 'object') {
-              if (movie.poster.url) {
-                posterUrl = movie.poster.url;
-                console.log(`  Использую poster.url: ${posterUrl}`);
-              } else if (movie.poster.previewUrl) {
-                posterUrl = movie.poster.previewUrl;
-                console.log(`  Использую poster.previewUrl: ${posterUrl}`);
-              }
             }
-          } else if (movie.backdrop) {
-            if (typeof movie.backdrop === 'string') {
-              posterUrl = movie.backdrop;
-              console.log(`  Использую backdrop(string): ${posterUrl}`);
-            } else if (typeof movie.backdrop === 'object' && movie.backdrop.url) {
-              posterUrl = movie.backdrop.url;
-              console.log(`  Использую backdrop.url: ${posterUrl}`);
+          }
+          
+          // 4. Проверяем poster_path для TMDB (запасной вариант)
+          if (!posterFound && movie.poster_path) {
+            const tmdbUrl = `https://image.tmdb.org/t/p/w500${movie.poster_path}`;
+            if (isValidImageUrl(tmdbUrl)) {
+              posterUrl = tmdbUrl;
+              posterFound = true;
+              console.log(`  Использую TMDB poster_path: ${posterUrl}`);
             }
-          } else if (movie.logo) {
-            if (typeof movie.logo === 'string') {
-              posterUrl = movie.logo;
-              console.log(`  Использую logo(string): ${posterUrl}`);
-            } else if (typeof movie.logo === 'object' && movie.logo.url) {
-              posterUrl = movie.logo.url;
-              console.log(`  Использую logo.url: ${posterUrl}`);
-            }
-          } else {
-            console.log(`  Использую дефолтный постер`);
+          }
+          
+          // 5. Если постер не найден, используем дефолтный
+          if (!posterFound) {
+            console.log(`  Использую дефолтный постер для фильма "${title}"`);
           }
             
           movieCard.innerHTML = `
             <div class="movie-poster">
-              <img src="${posterUrl}" alt="${title}" onerror="this.src='/static/default-poster.jpg'">
+              <img src="${posterUrl}" alt="${title}" 
+                  onerror="this.onerror=null; this.src='/static/default-poster.jpg';">
               <div class="like-button" data-movie-id="${movieId}">
                 <svg viewBox="0 0 24 24">
                   <path d="M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.42,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.58,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z"></path>
@@ -2048,25 +2061,20 @@
           `;
           
           movieCard.addEventListener('click', (e) => {
-            // Если клик был по кнопке лайка, обрабатываем его отдельно
             if (e.target.closest('.like-button')) {
               e.stopPropagation();
               handleLikeClick(e.target.closest('.like-button'), movieId);
-          } else {
-              // Иначе показываем детали фильма
+            } else {
               showMovieDetails(movieId);
             }
           });
           
           container.appendChild(movieCard);
-          
-          // Проверяем, лайкнут ли фильм
           checkIfMovieLiked(movieId);
         });
         
-        // Устанавливаем флаг загрузки рекомендаций
         recommendationsLoaded = true;
-      }
+      } 
     });
   </script>
 </body>

@@ -685,48 +685,42 @@ class RedisMovieClient:
         # Обработка рейтинга
         rating_value = movie_data.get("rating", 0)
         if rating_value is None:
-            result["rating"] = 0.0
-        else:
-            try:
-                result["rating"] = float(rating_value)
-            except (ValueError, TypeError):
-                result["rating"] = 0.0
+            rating_value = 0
+        
+        try:
+            kp_rating = float(rating_value)
+        except (ValueError, TypeError):
+            kp_rating = 0
+            
+        # Создаем структуру рейтинга как в оригинале
+        result["rating"] = kp_rating
+        result["original_rating"] = {
+            "await": None,
+            "filmCritics": 0,
+            "imdb": kp_rating,  # Используем тот же рейтинг для IMDB
+            "kp": kp_rating,
+            "russianFilmCritics": 0
+        }
             
         # Обработка постера
-        poster = str(movie_data.get("poster", "") or "")
+        poster = movie_data.get("poster", "")
         if not poster:
-            result["poster"] = "/static/default-poster.jpg"
+            result["poster"] = None
         else:
-            # Проверяем, не является ли постер строковым представлением словаря
-            if poster.startswith("{") and poster.endswith("}") and ("'url':" in poster or '"url":' in poster):
-                try:
-                    # Пытаемся извлечь URL превью постера из строкового представления
-                    import ast
-                    import json
-                    
-                    # Пробуем распарсить как JSON, если не получается, используем ast
-                    try:
-                        poster_dict = json.loads(poster.replace("'", '"'))
-                    except:
-                        poster_dict = ast.literal_eval(poster)
-                        
-                    if isinstance(poster_dict, dict):
-                        if 'previewUrl' in poster_dict:
-                            result["poster"] = poster_dict['previewUrl']
-                        elif 'url' in poster_dict:
-                            result["poster"] = poster_dict['url']
-                        else:
-                            result["poster"] = poster
-                    else:
-                        result["poster"] = poster
-                except:
-                    result["poster"] = poster
-            else:
-                result["poster"] = poster
+            try:
+                # Пробуем распарсить JSON
+                import json
+                poster_dict = json.loads(poster.replace("'", '"'))
+                if isinstance(poster_dict, dict):
+                    result["poster"] = poster_dict
+                else:
+                    result["poster"] = {"url": str(poster), "previewUrl": str(poster)}
+            except:
+                result["poster"] = {"url": str(poster), "previewUrl": str(poster)}
             
         # Дополнительные поля
-        result["status"] = str(movie_data.get("status", "") or "")
-        result["ageRating"] = str(movie_data.get("ageRating", "") or "")
+        result["status"] = movie_data.get("status") or None
+        result["ageRating"] = movie_data.get("ageRating") or None
         
         # Обработка стран
         countries = movie_data.get("countries", "")
@@ -773,9 +767,6 @@ class RedisMovieClient:
         # Обработка категории
         result["category"] = str(movie_data.get("category", "") or "")
         
-        # Обработка альтернативного названия
-        result["alternativeName"] = str(movie_data.get("alternativeName", "") or "")
-        
         return result
 
     @redis_error_handler
@@ -787,16 +778,39 @@ class RedisMovieClient:
         # Преобразуем ID в строку и добавляем префикс "movie:"
         redis_id = f"movie:{movie_id}"
         
-        # Получаем фильм из Redis
-        movie_data = self.redis_client.hgetall(redis_id)
-        
-        if not movie_data:
-            return None
+        try:
+            # Проверяем тип ключа перед получением данных
+            key_type = self.redis_client.type(redis_id)
+            if key_type != "hash":
+                print(f"⚠️ Пропускаем ключ {redis_id}: неверный тип {key_type}")
+                return None
+                
+            # Получаем фильм из Redis
+            movie_data = self.redis_client.hgetall(redis_id)
             
-        # Преобразуем данные из Redis в словарь Python
-        movie = self._convert_redis_to_movie(redis_id, movie_data)
-        
-        return movie
+            if not movie_data:
+                return None
+                
+            # Преобразуем данные из Redis в словарь Python
+            movie = self._convert_redis_to_movie(redis_id, movie_data)
+            
+            # Проверяем наличие постера
+            if not movie.get("poster"):
+                movie["poster"] = {
+                    "url": "/static/default-poster.jpg",
+                    "previewUrl": "/static/default-poster.jpg"
+                }
+            elif isinstance(movie["poster"], str):
+                movie["poster"] = {
+                    "url": movie["poster"],
+                    "previewUrl": movie["poster"]
+                }
+            
+            return movie
+            
+        except Exception as e:
+            print(f"❌ Ошибка при получении фильма {redis_id}: {str(e)}")
+            return None
         
     @redis_error_handler
     def get_all_movies(self):
@@ -813,10 +827,20 @@ class RedisMovieClient:
         # Получаем данные для каждого фильма
         movies = []
         for key in movie_keys:
-            movie_data = self.redis_client.hgetall(key)
-            if movie_data:
-                movie = self._convert_redis_to_movie(key, movie_data)
-                movies.append(movie)
+            try:
+                # Проверяем, что ключ является хэш-таблицей
+                key_type = self.redis_client.type(key)
+                if key_type != "hash":
+                    print(f"⚠️ Пропускаем ключ {key}: неверный тип {key_type}")
+                    continue
+                    
+                movie_data = self.redis_client.hgetall(key)
+                if movie_data:
+                    movie = self._convert_redis_to_movie(key, movie_data)
+                    movies.append(movie)
+            except Exception as e:
+                print(f"❌ Ошибка при обработке фильма {key}: {str(e)}")
+                continue
                 
         return movies
 
@@ -1089,7 +1113,7 @@ class RedisMovieClient:
             return False
         
     @redis_error_handler
-    def get_recommendations(self, liked_movie_ids, limit=10):
+    def get_recommendations(self, liked_movie_ids, limit=15):
         """
         Возвращает рекомендации фильмов на основе списка идентификаторов лайкнутых фильмов.
         
@@ -1102,9 +1126,9 @@ class RedisMovieClient:
             return []
             
         if not liked_movie_ids:
-            # Если список лайкнутых фильмов пуст, возвращаем пустой список
-            print("⚠️ Список лайкнутых фильмов пуст, рекомендации не формируются")
-            return []
+            # Если список лайкнутых фильмов пуст, возвращаем популярные фильмы
+            print("⚠️ Список лайкнутых фильмов пуст, возвращаем популярные фильмы")
+            return self.get_popular_movies(limit)
             
         # Собираем жанры и годы лайкнутых фильмов
         genres = set()
@@ -1148,31 +1172,71 @@ class RedisMovieClient:
         
         # Если нет рекомендаций, возвращаем популярные фильмы
         if not movie_keys:
+            print("⚠️ Нет похожих фильмов, возвращаем популярные")
             return self.get_popular_movies(limit)
             
         # Получаем данные фильмов
         recommendations = []
         for key in movie_keys:
-            movie_id = key.replace("movie:", "")
-            movie = self.get_movie_by_id(movie_id)
-            if movie:
-                recommendations.append(movie)
-                
+            try:
+                movie_id = key.replace("movie:", "")
+                movie = self.get_movie_by_id(movie_id)
+                if movie:
+                    # Проверяем и форматируем постер
+                    poster = movie.get("poster")
+                    if not poster:
+                        movie["poster"] = {
+                            "url": "/static/default-poster.jpg",
+                            "previewUrl": "/static/default-poster.jpg"
+                        }
+                    elif isinstance(poster, str):
+                        if poster.startswith("{") and poster.endswith("}"):
+                            try:
+                                import json
+                                poster_dict = json.loads(poster.replace("'", '"'))
+                                if isinstance(poster_dict, dict):
+                                    movie["poster"] = poster_dict
+                                else:
+                                    movie["poster"] = {
+                                        "url": str(poster),
+                                        "previewUrl": str(poster)
+                                    }
+                            except:
+                                movie["poster"] = {
+                                    "url": str(poster),
+                                    "previewUrl": str(poster)
+                                }
+                        else:
+                            movie["poster"] = {
+                                "url": str(poster),
+                                "previewUrl": str(poster)
+                            }
+                    elif isinstance(poster, dict):
+                        if "url" not in poster:
+                            movie["poster"] = {
+                                "url": "/static/default-poster.jpg",
+                                "previewUrl": "/static/default-poster.jpg"
+                            }
+                    recommendations.append(movie)
+            except Exception as e:
+                print(f"❌ Ошибка при обработке фильма {key}: {str(e)}")
+                continue
+
         # Сортируем по рейтингу
         def get_rating(movie):
-            rating = movie.get("rating", 0)
-            if isinstance(rating, dict) and "kp" in rating:
-                return rating["kp"]
-            elif isinstance(rating, (int, float)):
-                return rating
-            else:
-                try:
+            try:
+                rating = movie.get("rating", 0)
+                if isinstance(rating, dict) and "kp" in rating:
+                    return float(rating["kp"])
+                elif isinstance(rating, (int, float)):
                     return float(rating)
-                except (ValueError, TypeError):
-                    return 0
+                else:
+                    return float(rating)
+            except (ValueError, TypeError):
+                return 0
         
         recommendations.sort(key=get_rating, reverse=True)
-        
+        logger.info(f"{recommendations[0]}")
         # Ограничиваем количество рекомендаций
         return recommendations[:limit]
         

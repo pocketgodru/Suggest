@@ -7,7 +7,7 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    TRANSFORMERS_OFFLINE=1 \
+    TRANSFORMERS_OFFLINE=0 \
     CUDA_VISIBLE_DEVICES="" \
     TORCH_DEVICE="cpu" \
     OMP_NUM_THREADS=1 \
@@ -33,7 +33,8 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir Flask==3.0.2 Flask-Cors==4.0.0 && \
     pip install --no-cache-dir python-dotenv==1.0.1 && \
     pip install --no-cache-dir pymongo==4.6.1 redis==5.0.1 && \
-    pip install --no-cache-dir transformers==4.37.2
+    pip install --no-cache-dir transformers==4.37.2 && \
+    pip install --no-cache-dir requests
 
 # Копируем файлы приложения
 COPY search-service/app/ .
