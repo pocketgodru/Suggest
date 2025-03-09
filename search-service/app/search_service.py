@@ -20,7 +20,7 @@ load_dotenv()
 
 # Настройка API для Hugging Face
 API_URL = "https://api-inference.huggingface.co/pipeline/feature-extraction/intfloat/multilingual-e5-large-instruct"
-HEADERS = {"Authorization": "Bearer "} #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
+HEADERS = {"Authorization": "Bearer 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"} #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
 
 app = Flask(__name__)
 CORS(app)
